@@ -1,6 +1,12 @@
 package lambdadb.ast
 
+import lambdadb.SqlLexer
 import lambdadb.SqlParser
+import org.antlr.v4.runtime.ANTLRInputStream
+import org.antlr.v4.runtime.BaseErrorListener
+import org.antlr.v4.runtime.CommonTokenStream
+import org.antlr.v4.runtime.RecognitionException
+import org.antlr.v4.runtime.misc.ParseCancellationException
 import org.antlr.v4.runtime.tree.TerminalNode
 
 sealed class Ast {
@@ -28,10 +34,26 @@ sealed class Ast {
 }
 
 
+fun parse(statement: String): Ast.Statement {
+    val ins = ANTLRInputStream(statement)
+    val lexer = SqlLexer(ins)
+    val tokens = CommonTokenStream(lexer)
+    val parser = SqlParser(tokens)
+    parser.removeErrorListeners()
+    parser.addErrorListener(ThrowingErrorListener)
+    return parseStmt(parser.stmt())
+}
 
-fun malformedAntlrCtx(): Nothing = TODO("We should never get here!")
+private object ThrowingErrorListener : BaseErrorListener() {
+    override fun syntaxError(recognizer: org.antlr.v4.runtime.Recognizer<*, *>?, offendingSymbol: Any, line: Int, charPositionInLine: Int, msg: String, e: RecognitionException?) {
+        throw ParseCancellationException("line $line:$charPositionInLine $msg")
+    }
+}
 
-fun parseStmt(stmt: SqlParser.StmtContext): Ast.Statement {
+
+private fun malformedAntlrCtx(): Nothing = TODO("We should never get here!")
+
+private fun parseStmt(stmt: SqlParser.StmtContext): Ast.Statement {
     return when {
         stmt.describe_stmt() != null -> parseDescribeStmt(stmt.describe_stmt())
         stmt.EXPLAIN() != null -> Ast.Statement.Explain(parseSelectStmt(stmt.select_stmt()))
@@ -40,11 +62,11 @@ fun parseStmt(stmt: SqlParser.StmtContext): Ast.Statement {
     }
 }
 
-fun parseDescribeStmt(describe: SqlParser.Describe_stmtContext): Ast.Statement.Describe {
+private fun parseDescribeStmt(describe: SqlParser.Describe_stmtContext): Ast.Statement.Describe {
     return Ast.Statement.Describe(parseTable(describe.table()))
 }
 
-fun parseSelectStmt(select: SqlParser.Select_stmtContext): Ast.Statement.Select {
+private fun parseSelectStmt(select: SqlParser.Select_stmtContext): Ast.Statement.Select {
     val expressions = select.named_expr().map(::parseNamedExpression)
     val source = parseSource(select.table_or_subquery())
     val limit = select.NUMERIC_LITERAL()?.let { Integer.parseInt(it.text) }
@@ -54,7 +76,7 @@ fun parseSelectStmt(select: SqlParser.Select_stmtContext): Ast.Statement.Select 
     return Ast.Statement.Select(expressions, source, predicate, groupBy, orderBy, limit)
 }
 
-fun parseSource(source: SqlParser.Table_or_subqueryContext): Ast.Source {
+private fun parseSource(source: SqlParser.Table_or_subqueryContext): Ast.Source {
     return when {
         source.table() != null -> Ast.Source.Table(parseTable(source.table()))
         source.subquery() != null -> Ast.Source.InlineView(parseSelectStmt(source.subquery().select_stmt()))
@@ -62,16 +84,16 @@ fun parseSource(source: SqlParser.Table_or_subqueryContext): Ast.Source {
     }
 }
 
-fun parseNamedExpression(node: SqlParser.Named_exprContext): Ast.NamedExpr {
+private fun parseNamedExpression(node: SqlParser.Named_exprContext): Ast.NamedExpr {
     val label = node.IDENTIFIER()?.text
     return Ast.NamedExpr(parseExpression(node.expr()), label)
 }
 
-fun parseOrderByExpression(node: SqlParser.Order_by_exprContext): Ast.OrderExpr {
+private fun parseOrderByExpression(node: SqlParser.Order_by_exprContext): Ast.OrderExpr {
     return Ast.OrderExpr(parseExpression(node.expr()), node.DESC() == null)
 }
 
-fun parseExpression(node: SqlParser.ExprContext): Ast.Expression {
+private fun parseExpression(node: SqlParser.ExprContext): Ast.Expression {
     return when {
         node.IS() != null -> {
             val functionName = if(node.NOT() == null) "is_null" else "is_not_null"
@@ -85,7 +107,7 @@ fun parseExpression(node: SqlParser.ExprContext): Ast.Expression {
     }
 }
 
-fun parseIdentifier(node: TerminalNode): Ast.Expression {
+private fun parseIdentifier(node: TerminalNode): Ast.Expression {
     val raw = node.text.toLowerCase().split('.')
     var expression: Ast.Expression= Ast.Expression.Identifier(raw.first())
     for(part in raw.drop(1)) {
@@ -94,20 +116,20 @@ fun parseIdentifier(node: TerminalNode): Ast.Expression {
     return expression
 }
 
-fun parseFunctionCall(node: SqlParser.Function_callContext): Ast.Expression.Function {
+private fun parseFunctionCall(node: SqlParser.Function_callContext): Ast.Expression.Function {
     val expressions = node.expr().map(::parseExpression)
     return Ast.Expression.Function(node.IDENTIFIER().text.toLowerCase(), expressions)
 }
 
-fun parseStringLiteral(node: TerminalNode): Ast.Expression.Constant {
+private fun parseStringLiteral(node: TerminalNode): Ast.Expression.Constant {
     return Ast.Expression.Constant(parseString(node))
 }
 
-fun parseNumericLiteral(node: TerminalNode): Ast.Expression.Constant {
+private fun parseNumericLiteral(node: TerminalNode): Ast.Expression.Constant {
     return Ast.Expression.Constant(node.text.toDouble())
 }
 
-fun parseTable(table: SqlParser.TableContext): Ast.Table {
+private fun parseTable(table: SqlParser.TableContext): Ast.Table {
     return Ast.Table(parseString(table.STRING_LITERAL()))
 }
 

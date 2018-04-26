@@ -3,7 +3,7 @@ package lambdadb.physical
 import lambdadb.ast.Ast
 import lambdadb.functions.BooleanInspector
 
-class FilterOperator(val source: Operator, val predicate: Ast.Expression): Operator() {
+class FilterOperator(val predicate: Ast.Expression, val source: PhysicalOperator): PhysicalOperator() {
     private lateinit var compiledExpression: ExpressionExecutor
 
     override fun columnAliases() = source.columnAliases()

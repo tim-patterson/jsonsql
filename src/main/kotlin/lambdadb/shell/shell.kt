@@ -2,9 +2,8 @@ package lambdadb.shell
 
 import lambdadb.SqlLexer
 import lambdadb.executor.execute
-import lambdadb.physical.Operator
+import lambdadb.physical.PhysicalOperator
 import org.antlr.v4.runtime.ANTLRInputStream
-import org.antlr.v4.runtime.CommonTokenStream
 import org.antlr.v4.runtime.Token
 import org.jline.reader.*
 import org.jline.reader.impl.history.DefaultHistory
@@ -80,7 +79,8 @@ object SqlHighlighter: Highlighter {
             SqlLexer.NOT to keywordStyle1,
             SqlLexer.NULL to keywordStyle1,
             SqlLexer.ORDER to keywordStyle1,
-            SqlLexer.SELECT to keywordStyle1
+            SqlLexer.SELECT to keywordStyle1,
+            SqlLexer.WHERE to keywordStyle1
     )
 
     override fun highlight(reader: LineReader, buffer: String): AttributedString {
@@ -108,7 +108,7 @@ private val tableStyle = AttributedStyle.DEFAULT.foreground(AttributedStyle.GREE
 private val headerStyle = AttributedStyle.BOLD.foreground(AttributedStyle.CYAN)
 
 
-fun renderTable(terminal: Terminal, operator: Operator) {
+fun renderTable(terminal: Terminal, operator: PhysicalOperator) {
     // Get the first 1000 rows to get a good guess on column width etc
     val rowBuffer = mutableListOf<List<String>>()
     val maxWidths = operator.columnAliases().map(String::length).toMutableList()

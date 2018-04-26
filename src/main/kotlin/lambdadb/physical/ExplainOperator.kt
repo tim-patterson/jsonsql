@@ -1,6 +1,6 @@
 package lambdadb.physical
 
-class ExplainOperator(val stmt: Operator): Operator() {
+class ExplainOperator(val stmt: PhysicalOperator): PhysicalOperator() {
     private lateinit var plan: Iterator<String>
 
     override fun columnAliases() = listOf("plan")
@@ -20,7 +20,7 @@ class ExplainOperator(val stmt: Operator): Operator() {
 
     override fun close() {} // Noop
 
-    private fun buildOutput(operator: Operator,
+    private fun buildOutput(operator: PhysicalOperator,
                             outputLines: MutableList<String> = mutableListOf(),
                             indent: Int = 0): MutableList<String> {
         outputLines.add( (0 until indent).map { "  " }.joinToString("") + "$operator")

@@ -3,7 +3,7 @@ package lambdadb.physical
 import lambdadb.fileformats.JsonReader
 
 
-class DescribeOperator(val tableGlob: String): Operator() {
+class DescribeOperator(val tableGlob: String): PhysicalOperator() {
     private val columns: Iterator<Pair<String,String>> by lazy(::scanTable)
 
     override fun columnAliases() = listOf("column_name", "column_type")

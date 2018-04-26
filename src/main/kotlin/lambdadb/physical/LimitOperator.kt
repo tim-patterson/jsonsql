@@ -1,6 +1,6 @@
 package lambdadb.physical
 
-class LimitOperator(val limit: Int, val source: Operator): Operator() {
+class LimitOperator(val limit: Int, val source: PhysicalOperator): PhysicalOperator() {
     private var offset = 0
 
     override fun columnAliases() = source.columnAliases()

@@ -2,7 +2,7 @@ package lambdadb.physical
 
 import lambdadb.fileformats.JsonReader
 
-class TableScanOperator(val tableGlob: String, val fields: List<String>): Operator() {
+class TableScanOperator(val tableGlob: String, val fields: List<String>): PhysicalOperator() {
     private val tableReader = JsonReader(tableGlob)
 
     override fun columnAliases() = fields

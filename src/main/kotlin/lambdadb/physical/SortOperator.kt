@@ -2,7 +2,7 @@ package lambdadb.physical
 
 import lambdadb.ast.Ast
 
-class SortOperator(val source: Operator, val sortExpressions: List<Ast.OrderExpr>): Operator() {
+class SortOperator(val sortExpressions: List<Ast.OrderExpr>, val source: PhysicalOperator): PhysicalOperator() {
     private val sortedBuffer: Iterator<List<Any?>> by lazy(::sort)
     private lateinit var compiledSortBy: List<CompiledOrderByExpr>
 

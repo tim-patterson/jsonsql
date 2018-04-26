@@ -3,12 +3,15 @@ package lambdadb.functions
 
 abstract class ScalarFunction {
     abstract fun execute(args: List<Any?>): Any?
+    abstract fun validateParameterCount(count: Int) : Boolean
 }
 
 abstract class TwoArgScalarFunction: ScalarFunction() {
     override fun execute(args: List<Any?>): Any? {
         return execute(args[0], args[1])
     }
+
+    override fun validateParameterCount(count: Int) = count == 2
 
     abstract fun execute(arg1: Any?, arg2: Any?): Any?
 }
@@ -17,6 +20,8 @@ abstract class OneArgScalarFunction: ScalarFunction() {
     override fun execute(args: List<Any?>): Any? {
         return execute(args[0])
     }
+
+    override fun validateParameterCount(count: Int) = count == 1
 
     abstract fun execute(arg1: Any?): Any?
 }

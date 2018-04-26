@@ -2,7 +2,7 @@ package lambdadb.physical
 
 import lambdadb.ast.Ast
 
-class GroupByOperator(val source: Operator, val expressions: List<Ast.NamedExpr>, val groupbyKeys: List<Ast.NamedExpr>): Operator() {
+class GroupByOperator(val source: PhysicalOperator, val expressions: List<Ast.NamedExpr>, val groupbyKeys: List<Ast.NamedExpr>): PhysicalOperator() {
 
     override fun columnAliases() = TODO()
 
