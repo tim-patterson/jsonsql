@@ -1,0 +1,2 @@
+#!/bin/sh
+./gradlew shadowjar && java -jar build/libs/lambdadb-all.jar
