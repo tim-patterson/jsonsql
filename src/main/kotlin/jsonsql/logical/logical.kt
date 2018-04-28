@@ -43,6 +43,10 @@ sealed class LogicalOperator {
     data class GroupBy(var expressions: List<Ast.NamedExpr>, var groupByExpressions: List<Ast.Expression>, var sourceOperator: LogicalOperator): LogicalOperator() {
         override fun fields() = expressions.map { it.alias!! }
     }
+
+    data class Gather(var sourceOperator: LogicalOperator): LogicalOperator() {
+        override fun fields() = sourceOperator.fields()
+    }
 }
 
 
@@ -54,6 +58,7 @@ fun logicalOperatorTree(stmt: Ast.Statement) : LogicalOperator {
     }
     populateFields(tree)
     validate(tree)
+    parallelize(tree)
     return tree
 }
 
@@ -146,6 +151,7 @@ private fun populateFields(operator: LogicalOperator, neededFields: List<String>
         }
 
         is LogicalOperator.Limit -> populateFields(operator.sourceOperator, neededFields)
+        is LogicalOperator.Gather -> populateFields(operator.sourceOperator, neededFields)
         is LogicalOperator.Describe -> null
         is LogicalOperator.DataSource -> operator.fields = neededFields
         is LogicalOperator.Explain -> populateFields(operator.sourceOperator)

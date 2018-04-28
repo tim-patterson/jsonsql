@@ -33,6 +33,7 @@ fun validate(operator: LogicalOperator) {
         is LogicalOperator.Describe -> null
         is LogicalOperator.DataSource -> null
         is LogicalOperator.Explain -> validate(operator.sourceOperator)
+        is LogicalOperator.Gather -> null
     }.safe
 }
 
