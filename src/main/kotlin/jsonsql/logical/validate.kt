@@ -9,32 +9,22 @@ fun validate(operator: LogicalOperator) {
     when(operator) {
         is LogicalOperator.Project -> {
             operator.expressions.map { validateExpression(it.expression, operator.sourceOperator.fields()) }
-            validate(operator.sourceOperator)
         }
         is LogicalOperator.LateralView -> {
             validateExpression(operator.expression.expression, operator.sourceOperator.fields())
-            validate(operator.sourceOperator)
         }
         is LogicalOperator.GroupBy -> {
             operator.expressions.map { validateExpression(it.expression, operator.sourceOperator.fields(), true) }
             operator.groupByExpressions.map { validateExpression(it, operator.sourceOperator.fields()) }
-
-            validate(operator.sourceOperator)
         }
         is LogicalOperator.Filter -> {
             validateExpression(operator.predicate, operator.sourceOperator.fields())
-            validate(operator.sourceOperator)
         }
         is LogicalOperator.Sort -> {
             operator.sortExpressions.map { validateExpression(it.expression, operator.sourceOperator.fields()) }
-            validate(operator.sourceOperator)
         }
-        is LogicalOperator.Limit -> validate(operator.sourceOperator)
-        is LogicalOperator.Describe -> null
-        is LogicalOperator.DataSource -> null
-        is LogicalOperator.Explain -> validate(operator.sourceOperator)
-        is LogicalOperator.Gather -> null
-    }.safe
+    }
+    operator.children().map { validate(it) }
 }
 
 private fun validateExpression(expression: Ast.Expression, sourceFields: List<String>, allowAggregate: Boolean = false) {

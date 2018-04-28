@@ -7,45 +7,56 @@ import jsonsql.safe
 
 sealed class LogicalOperator {
     abstract fun fields(): List<String>
+    abstract fun children(): List<LogicalOperator>
 
     data class Project(var expressions: List<Ast.NamedExpr>, var sourceOperator: LogicalOperator): LogicalOperator() {
         override fun fields() = expressions.map { it.alias!! }
+        override fun children() = listOf(sourceOperator)
     }
 
     data class LateralView(var expression: Ast.NamedExpr, var sourceOperator: LogicalOperator): LogicalOperator() {
         override fun fields() = (sourceOperator.fields() + expression.alias!!).distinct()
+        override fun children() = listOf(sourceOperator)
     }
 
     data class Filter(var predicate: Ast.Expression, var sourceOperator: LogicalOperator): LogicalOperator() {
         override fun fields() = sourceOperator.fields()
+        override fun children() = listOf(sourceOperator)
     }
 
     data class Sort(var sortExpressions: List<Ast.OrderExpr>, var sourceOperator: LogicalOperator): LogicalOperator() {
         override fun fields() = sourceOperator.fields()
+        override fun children() = listOf(sourceOperator)
     }
 
     data class Limit(var limit: Int, var sourceOperator: LogicalOperator): LogicalOperator() {
         override fun fields() = sourceOperator.fields()
+        override fun children() = listOf(sourceOperator)
     }
 
     data class Describe(var tableDefinition: Ast.Table): LogicalOperator() {
         override fun fields() = listOf("column_name", "column_type")
+        override fun children() = listOf<LogicalOperator>()
     }
 
     data class DataSource(var fields: List<String>, var tableDefinition: Ast.Table): LogicalOperator() {
         override fun fields() = fields
+        override fun children() = listOf<LogicalOperator>()
     }
 
     data class Explain(var sourceOperator: LogicalOperator): LogicalOperator() {
         override fun fields() = listOf("plan")
+        override fun children() = listOf(sourceOperator)
     }
 
     data class GroupBy(var expressions: List<Ast.NamedExpr>, var groupByExpressions: List<Ast.Expression>, var sourceOperator: LogicalOperator): LogicalOperator() {
         override fun fields() = expressions.map { it.alias!! }
+        override fun children() = listOf(sourceOperator)
     }
 
     data class Gather(var sourceOperator: LogicalOperator): LogicalOperator() {
         override fun fields() = sourceOperator.fields()
+        override fun children() = listOf(sourceOperator)
     }
 }
 
@@ -149,13 +160,9 @@ private fun populateFields(operator: LogicalOperator, neededFields: List<String>
             operator.expression = operator.expression.copy(alias = alias)
             populateFields(operator.sourceOperator, upstreamFieldsNeeded)
         }
-
-        is LogicalOperator.Limit -> populateFields(operator.sourceOperator, neededFields)
-        is LogicalOperator.Gather -> populateFields(operator.sourceOperator, neededFields)
-        is LogicalOperator.Describe -> null
         is LogicalOperator.DataSource -> operator.fields = neededFields
-        is LogicalOperator.Explain -> populateFields(operator.sourceOperator)
-    }.safe
+        else -> operator.children().map { populateFields(it) }
+    }
 }
 
 private fun checkForAggregate(expr: Ast.Expression) : Boolean {

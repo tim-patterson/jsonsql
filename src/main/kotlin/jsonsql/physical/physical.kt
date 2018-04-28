@@ -55,15 +55,8 @@ private fun physicalOperator(operator: LogicalOperator, pathOverride: String? = 
 
 private fun getTableSource(operator: LogicalOperator): Ast.Table {
     return when (operator) {
-        is LogicalOperator.Limit -> getTableSource(operator.sourceOperator)
-        is LogicalOperator.Sort -> getTableSource(operator.sourceOperator)
         is LogicalOperator.Describe -> operator.tableDefinition
         is LogicalOperator.DataSource -> operator.tableDefinition
-        is LogicalOperator.Explain -> getTableSource(operator.sourceOperator)
-        is LogicalOperator.Project -> getTableSource(operator.sourceOperator)
-        is LogicalOperator.Filter -> getTableSource(operator.sourceOperator)
-        is LogicalOperator.LateralView -> getTableSource(operator.sourceOperator)
-        is LogicalOperator.GroupBy -> getTableSource(operator.sourceOperator)
-        is LogicalOperator.Gather -> getTableSource(operator.sourceOperator)
+        else -> operator.children().map { getTableSource(it) }.first()
     }
 }

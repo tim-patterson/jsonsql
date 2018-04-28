@@ -4,9 +4,10 @@ import jsonsql.physical.PhysicalOperator
 import java.util.concurrent.*
 
 class GatherOperator(val sources: List<PhysicalOperator>): PhysicalOperator() {
-    private val queue: LinkedBlockingQueue<List<Any?>> by lazy (::runChildren)
+    private val queue: LinkedBlockingQueue<List<List<Any?>>> by lazy (::runChildren)
     private lateinit var futures: List<Future<Unit>>
     private lateinit var executorPool: ExecutorService
+    private var rowIter: Iterator<List<Any?>> = listOf<List<Any?>>().iterator()
     override fun columnAliases() = sources.first().columnAliases()
 
     override fun compile() {
@@ -15,9 +16,11 @@ class GatherOperator(val sources: List<PhysicalOperator>): PhysicalOperator() {
 
     override fun next(): List<Any?>? {
         while (true) {
-            val row = queue.poll(10, TimeUnit.MILLISECONDS)
-            if (row != null) {
-                return row
+            if (rowIter.hasNext()) return rowIter.next()
+
+            val rows = queue.poll(10, TimeUnit.MILLISECONDS)
+            if (rows != null) {
+                rowIter = rows.iterator()
             } else {
                 // We timed out, see if all the workers are done
                 if (futures.all { it.isDone }) {
@@ -34,15 +37,23 @@ class GatherOperator(val sources: List<PhysicalOperator>): PhysicalOperator() {
         sources.forEach { it.close() }
     }
 
-    private fun runChildren(): LinkedBlockingQueue<List<Any?>> {
-        val queue = LinkedBlockingQueue<List<Any?>>(1000)
+    private fun runChildren(): LinkedBlockingQueue<List<List<Any?>>> {
+        val queue = LinkedBlockingQueue<List<List<Any?>>>(100)
         executorPool = Executors.newWorkStealingPool()
         val tasks = sources.map { source ->
             Callable<Unit> {
                 while (!Thread.interrupted()) {
-                    val row = source.next()
-                    row ?: break
-                    queue.put(row)
+                    val buf = mutableListOf<List<Any?>>()
+                    for (i in 0 until 100) {
+                        val row = source.next()
+                        if (row != null) {
+                            buf.add(row)
+                        }else {
+                            queue.put(buf)
+                            return@Callable
+                        }
+                    }
+                    queue.put(buf)
                 }
             }
         }

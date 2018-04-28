@@ -1,6 +1,6 @@
 package jsonsql.fileformats
 
-import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import jsonsql.filesystems.FileSystem
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -9,7 +9,7 @@ import java.io.InputStreamReader
 class JsonReader(val path: String) {
     private val files: Iterator<String> by lazy(::listDirs)
     private var reader: BufferedReader? = null
-    private val gson = Gson()
+    private val gson = GsonBuilder().create()
 
     fun next(): Map<String,*>? {
         while(true) {

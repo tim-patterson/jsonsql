@@ -4,12 +4,8 @@ package jsonsql.logical
 // Returns true if the subtree is parallel safe
 fun parallelize(logicalOperator: LogicalOperator): Boolean {
     return when(logicalOperator) {
-        is LogicalOperator.DataSource -> true
-        is LogicalOperator.Filter -> parallelize(logicalOperator.sourceOperator)
-        is LogicalOperator.LateralView -> parallelize(logicalOperator.sourceOperator)
-        is LogicalOperator.Project -> parallelize(logicalOperator.sourceOperator)
         is LogicalOperator.Describe -> false
-        is LogicalOperator.Explain -> parallelize(logicalOperator.sourceOperator)
+        is LogicalOperator.DataSource -> true
 
         is LogicalOperator.Sort -> {
             if (parallelize(logicalOperator.sourceOperator)) {
@@ -32,5 +28,7 @@ fun parallelize(logicalOperator: LogicalOperator): Boolean {
             false
         }
         is LogicalOperator.Gather -> false
+
+        else -> logicalOperator.children().all { parallelize(it) }
     }
 }

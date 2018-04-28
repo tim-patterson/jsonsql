@@ -153,7 +153,7 @@ fun renderTable(terminal: Terminal, operator: PhysicalOperator) {
     }
     terminal.writer().println(horizontalLine)
     val totalTimeMs = System.currentTimeMillis() - startTime
-    terminal.writer().println(AttributedString("$rowCount rows returned in ${totalTimeMs}ms", AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN)).toAnsi(terminal))
+    terminal.writer().println(AttributedString("$rowCount rows returned in ${totalTimeMs/1000.0} seconds", AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN)).toAnsi(terminal))
 }
 
 fun renderLine(line: List<String>, widths: List<Int>, style: AttributedStyle = AttributedStyle.DEFAULT): AttributedString {
