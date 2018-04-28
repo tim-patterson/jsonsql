@@ -104,7 +104,7 @@ private fun parseExpression(node: SqlParser.ExprContext): Ast.Expression {
                     val functionName = if (node.NOT() == null) "is_null" else "is_not_null"
                     Ast.Expression.Function(functionName, expr)
                 }
-                else -> malformedAntlrCtx()
+                else -> expr.first() // ( expr ) case
             }
         }
         // Math operators etc

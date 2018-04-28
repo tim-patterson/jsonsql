@@ -42,7 +42,8 @@ describe_stmt
   ;
 
 expr
-  : STRING_LITERAL
+  : '(' expr ')'
+  | STRING_LITERAL
   | NUMERIC_LITERAL
   | function_call
   | IDENTIFIER

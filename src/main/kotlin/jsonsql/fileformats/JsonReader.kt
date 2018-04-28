@@ -5,7 +5,6 @@ import jsonsql.filesystems.FileSystem
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
-
 class JsonReader(val path: String) {
     private val files: Iterator<String> by lazy(::listDirs)
     private var reader: BufferedReader? = null
@@ -23,6 +22,7 @@ class JsonReader(val path: String) {
             // Should always have a reader here
             val line = reader!!.readLine()
             if (line != null) {
+
                 return gson.fromJson(line.trimEnd(0.toChar()), Map::class.java).mapKeys { (it.key as String).toLowerCase() }
             } else {
                 reader = null
