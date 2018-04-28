@@ -11,7 +11,7 @@ buildscript {
     }
 }
 
-group 'lambdadb'
+group 'jsonsql'
 version '1.0-SNAPSHOT'
 
 apply plugin: 'java'
@@ -48,12 +48,13 @@ compileKotlin {
 }
 
 shadowJar {
+    classifier = null
     version = null
 }
 
 jar {
     manifest {
-        attributes 'Main-Class': 'lambdadb.shell.ShellKt'
+        attributes 'Main-Class': 'jsonsql.shell.ShellKt'
     }
 }
 

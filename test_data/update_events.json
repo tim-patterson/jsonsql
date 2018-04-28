@@ -1,0 +1,6 @@
+{"user_id":1, "event_time": "2018-01-01", "state": "ordered"}
+{"user_id":1, "event_time": "2018-01-02", "state": "in transit"}
+{"user_id":1, "event_time": "2018-01-03", "state": "delivered"}
+{"user_id":2, "event_time": "2018-01-10", "state": "in transit"}
+{"user_id":2, "event_time": "2018-01-01", "state": "ordered"}
+{"user_id":3, "event_time": "2018-01-02", "state": "ordered"}
