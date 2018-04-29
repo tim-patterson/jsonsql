@@ -35,6 +35,7 @@ fun main(args: Array<String>) {
     var commandBuffer = mutableListOf<String>()
 
     try {
+        terminal.writer().println(AttributedString("JsonSQL", AttributedStyle.BOLD).toAnsi(terminal))
         while (true) {
             val line = lineReader.readLine("> ")
             commandBuffer.add(line)
@@ -87,7 +88,9 @@ object SqlHighlighter: Highlighter {
             SqlLexer.ORDER to keywordStyle1,
             SqlLexer.SELECT to keywordStyle1,
             SqlLexer.WHERE to keywordStyle1,
-            SqlLexer.SINGLE_LINE_COMMENT to commentStyle
+            SqlLexer.SINGLE_LINE_COMMENT to commentStyle,
+            SqlLexer.LATERAL to keywordStyle1,
+            SqlLexer.VIEW to keywordStyle1
     )
 
     override fun highlight(reader: LineReader, buffer: String): AttributedString {

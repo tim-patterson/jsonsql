@@ -32,9 +32,11 @@ val functionRegistry = mapOf<String, Function>(
         "or" to OrFunction,
         "and" to AndFunction,
         "coalesce" to CoalesceFunction,
-        "max_row" to MaxRowFunction,
 
         // Aggregate Functions
         "count" to CountFunction,
-        "sum" to SumFunction
+        "sum" to SumFunction,
+        "min" to MinFunction,
+        "max" to MaxFunction,
+        "max_row" to MaxRowFunction
 )

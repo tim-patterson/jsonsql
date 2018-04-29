@@ -25,7 +25,7 @@ class DescribeOperator(val path: String): PhysicalOperator() {
 
         val tableReader = JsonReader(path)
 
-        for (i in 0 until 10000) {
+        for (i in 0 until 2000) {
             val json = tableReader.next()
             json ?: break
             json.forEach { (key, value) ->

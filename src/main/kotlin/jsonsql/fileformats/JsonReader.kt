@@ -35,7 +35,8 @@ class JsonReader(val path: String) {
     }
 
     private fun listDirs(): Iterator<String> {
-        return FileSystem.listDir(path).iterator()
+        // Sort so the describe operator has more of a chance of getting the latest data
+        return FileSystem.listDir(path).sortedDescending().iterator()
     }
 
     private fun openReader(path: String) {

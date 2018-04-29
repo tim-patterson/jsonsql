@@ -30,6 +30,37 @@ object SumFunction: Function.AggregateFunction() {
     }
 }
 
+object MaxFunction: Function.AggregateFunction() {
+    override fun validateParameterCount(count: Int) = count == 1
+    override fun executor() = object: AggregateFunctionExecutor() {
+        private var maxValue: Any? = null
+        override fun processInput(args: List<Any?>) {
+            if (compareValues(args[0], maxValue) > 0) {
+                maxValue = args[0]
+            }
+        }
+
+        override fun getResult() = maxValue
+    }
+}
+
+object MinFunction: Function.AggregateFunction() {
+    override fun validateParameterCount(count: Int) = count == 1
+    override fun executor() = object: AggregateFunctionExecutor() {
+        private var minValue: Any? = null
+        override fun processInput(args: List<Any?>) {
+            if (minValue == null) {
+                minValue = args[0]
+            } else if (args[0] != null && compareValues(args[0], minValue) < 0) {
+                minValue = args[0]
+            }
+        }
+
+        override fun getResult() = minValue
+    }
+}
+
+
 
 object MaxRowFunction: Function.AggregateFunction() {
     override fun validateParameterCount(count: Int) = count == 2

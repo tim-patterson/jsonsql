@@ -10,7 +10,7 @@ object S3FileSystem: FileSystem {
 
     override fun listDir(authority: String, path: String): List<String> {
         val listing = s3.listObjects(authority, path.trimStart('/'))
-        return listing.objectSummaries.map { "$authority/${it.key}" }
+        return listing.objectSummaries.filter { it.size > 0 }.map { "$authority/${it.key}" }
     }
 
     override fun open(authority: String, path: String): InputStream {
