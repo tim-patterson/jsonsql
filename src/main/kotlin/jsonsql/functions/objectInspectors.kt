@@ -1,5 +1,7 @@
 package jsonsql.functions
 
+import com.google.gson.GsonBuilder
+
 
 object NumberInspector {
     fun inspect(value: Any?): Double? {
@@ -32,10 +34,13 @@ object ArrayInspector {
 }
 
 object StringInspector {
+    private val gson = GsonBuilder().create()
     fun inspect(value: Any?): String? {
         return when(value) {
             is String -> value
             null -> null
+            is List<*> -> gson.toJson(value)
+            is Map<*,*> -> gson.toJson(value)
             else -> value.toString()
         }
     }

@@ -2,6 +2,7 @@ package jsonsql.shell
 
 import jsonsql.SqlLexer
 import jsonsql.executor.execute
+import jsonsql.functions.StringInspector
 import jsonsql.physical.PhysicalOperator
 import org.antlr.v4.runtime.ANTLRInputStream
 import org.antlr.v4.runtime.Token
@@ -171,6 +172,6 @@ fun stringifyRow(row: List<Any?>) = row.map(::stringifyCell)
 
 fun stringifyCell(cell: Any?): String {
     cell ?: return "NULL"
-    return cell.toString()
+    return StringInspector.inspect(cell)!!
 }
 
