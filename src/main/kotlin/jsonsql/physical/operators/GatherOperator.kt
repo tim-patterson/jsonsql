@@ -25,6 +25,8 @@ class GatherOperator(val sources: List<PhysicalOperator>): PhysicalOperator() {
                 // We timed out, see if all the workers are done
                 if (futures.all { it.isDone }) {
                     close()
+                    // throw any errors that have occured
+                    futures.map { it.get() }
                     return null
                 }
             }

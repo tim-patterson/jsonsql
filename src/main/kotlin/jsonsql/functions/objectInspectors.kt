@@ -17,7 +17,7 @@ object MapInspector {
     @Suppress("UNCHECKED_CAST")
     fun inspect(value: Any?): Map<String,*>? {
         return when(value) {
-            is Map<*,*> -> value as Map<String,*>
+            is Map<*,*> -> (value as Map<String,*>).mapKeys { it.key.toLowerCase() }
             else -> null
         }
     }
