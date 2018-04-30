@@ -12,7 +12,7 @@ import org.antlr.v4.runtime.tree.TerminalNode
 sealed class Ast {
     sealed class Statement: Ast() {
         data class Explain(val select: Select): Statement()
-        data class Select(val expressions: List<NamedExpr>, val source: Source, val predicate: Expression?, val groupBy: List<Expression>?, val orderBy: List<OrderExpr>?, val limit: Int?) : Statement()
+        data class Select(val expressions: List<NamedExpr>, val source: Source, val predicate: Expression?=null, val groupBy: List<Expression>?=null, val orderBy: List<OrderExpr>?=null, val limit: Int?=null) : Statement()
         data class Describe(val tbl: Table) : Statement()
     }
 

@@ -3,7 +3,6 @@ package jsonsql.logical
 import jsonsql.ast.Ast
 import jsonsql.functions.Function
 import jsonsql.functions.functionRegistry
-import jsonsql.safe
 
 sealed class LogicalOperator {
     abstract fun fields(): List<String>
