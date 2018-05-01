@@ -1,4 +1,5 @@
 # JsonSQL
+[![Build Status](https://travis-ci.org/tim-patterson/jsonsql.svg?branch=master)](https://travis-ci.org/tim-patterson/jsonsql)
 
 A toy project that allows querying of newline delimited json using simple sql expressions
 
