@@ -43,6 +43,8 @@ describe_stmt
 
 expr
   : '(' expr ')'
+  | expr OP_IDX expr ']'
+  | expr OP_DOT IDENTIFIER
   | STRING_LITERAL
   | NUMERIC_LITERAL
   | function_call
@@ -98,6 +100,7 @@ NULL: N U L L;
 LATERAL: L A T E R A L;
 VIEW: V I E W;
 
+
 OP_PLUS: '+';
 OP_MINUS: '-';
 OP_MULT: '*';
@@ -108,12 +111,14 @@ OP_LT: '<';
 OP_LTE: '<=';
 OP_EQ: '=' | '==';
 OP_NEQ: '!=' | '<>';
+OP_DOT: '.';
+OP_IDX: '[';
 OP_AND: A N D;
 OP_OR: O R;
 
 
 IDENTIFIER
- : [a-zA-Z_] [a-zA-Z_0-9.]*
+ : [a-zA-Z_] [a-zA-Z_0-9]*
  ;
 
 SINGLE_LINE_COMMENT

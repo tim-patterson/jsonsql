@@ -104,6 +104,7 @@ private fun parseExpression(node: SqlParser.ExprContext): Ast.Expression {
                     val functionName = if (node.NOT() == null) "is_null" else "is_not_null"
                     Ast.Expression.Function(functionName, expr)
                 }
+                node.OP_DOT() != null -> Ast.Expression.Function("idx", expr + Ast.Expression.Constant(node.IDENTIFIER().text.toLowerCase()))
                 else -> expr.first() // ( expr ) case
             }
         }
@@ -111,6 +112,7 @@ private fun parseExpression(node: SqlParser.ExprContext): Ast.Expression {
         node.expr().size == 2 -> {
             val exprs = listOf(parseExpression(node.expr()[0]), parseExpression(node.expr()[1]))
             when {
+                node.OP_IDX() != null -> Ast.Expression.Function("idx", exprs)
                 node.OP_PLUS() != null -> Ast.Expression.Function("add", exprs)
                 node.OP_MINUS() != null -> Ast.Expression.Function("minus", exprs)
                 node.OP_MULT() != null -> Ast.Expression.Function("multiply", exprs)
@@ -136,12 +138,7 @@ private fun parseExpression(node: SqlParser.ExprContext): Ast.Expression {
 }
 
 private fun parseIdentifier(node: TerminalNode): Ast.Expression {
-    val raw = node.text.toLowerCase().split('.')
-    var expression: Ast.Expression= Ast.Expression.Identifier(raw.first())
-    for(part in raw.drop(1)) {
-        expression = Ast.Expression.Function("idx", listOf(expression, Ast.Expression.Constant(part)))
-    }
-    return expression
+    return Ast.Expression.Identifier(node.text.toLowerCase())
 }
 
 private fun parseFunctionCall(node: SqlParser.Function_callContext): Ast.Expression.Function {

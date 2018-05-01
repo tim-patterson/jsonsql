@@ -34,11 +34,19 @@ object CoalesceFunction: Function.ScalarFunction() {
 // gets components out of nested objects
 object IndexFunction: TwoArgScalarFunction() {
     override fun execute(arg1: Any?, arg2: Any?): Any? {
-        val obj = MapInspector.inspect(arg1)
-        obj ?: return null
-        val field = StringInspector.inspect(arg2)
+        val array = ArrayInspector.inspect(arg1)
+        array?.let {
+            val key = NumberInspector.inspect(arg2) ?: return null
+            return array[key.toInt()]
+        }
 
-        return obj[field]
+        val map = MapInspector.inspect(arg1)
+        map?.let {
+            val key = StringInspector.inspect(arg2) ?: return null
+            return map[key]
+        }
+
+        return null
     }
 }
 

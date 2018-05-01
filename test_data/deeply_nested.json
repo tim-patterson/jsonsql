@@ -1,0 +1,5 @@
+{"rownum":1, "arrayval": [["a1a", "a1b"],["a2a", "a2b"] ], "structval": {"a": {"b":"a"}}}
+{"rownum":2, "arrayval": [["b1a", "b1b"],["b2a", "b2b"] ], "structval": {"a": {"b":"b"}}}
+{"rownum":3, "arrayval": [["c1a", "c1b"],["c2a", "c2b"] ], "structval": {"a": {"b":"c"}}}
+{"rownum":4, "arrayval": [["d1a", "d1b"],["d2a", "d2b"] ], "structval": {"a": {"b":"d"}}}
+{"rownum":5, "arrayval": [["e1a", "e1b"],["e2a", "e2b"] ], "structval": {"a": {"b":"e"}}}
