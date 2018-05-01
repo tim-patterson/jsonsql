@@ -1,12 +1,13 @@
 package jsonsql.physical.operators
 
+import jsonsql.ast.Field
 import jsonsql.fileformats.JsonReader
 import jsonsql.physical.PhysicalOperator
 
-class TableScanOperator(val path: String, val fields: List<String>): PhysicalOperator() {
+class TableScanOperator(val path: String, val fields: List<String>, val tableAlias: String?): PhysicalOperator() {
     private val tableReader = JsonReader(path)
 
-    override fun columnAliases() = fields
+    override fun columnAliases() = fields.map { Field(tableAlias, it) }
 
     override fun compile() {}
 

@@ -8,6 +8,7 @@ class GatherOperator(val sources: List<PhysicalOperator>): PhysicalOperator() {
     private lateinit var futures: List<Future<Unit>>
     private lateinit var executorPool: ExecutorService
     private var rowIter: Iterator<List<Any?>> = listOf<List<Any?>>().iterator()
+
     override fun columnAliases() = sources.first().columnAliases()
 
     override fun compile() {

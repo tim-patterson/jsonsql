@@ -1,10 +1,9 @@
 package jsonsql.logical
 
 import jsonsql.ast.Ast
+import jsonsql.ast.Field
 import jsonsql.functions.Function
 import jsonsql.functions.functionRegistry
-
-data class Field(val tableAlias: String?, val fieldName: String)
 
 sealed class LogicalOperator {
     abstract fun fields(): List<Field>
@@ -20,22 +19,22 @@ sealed class LogicalOperator {
     }
 
     data class LateralView(var expression: Ast.NamedExpr, var sourceOperator: LogicalOperator): LogicalOperator() {
-        override fun fields() = (sourceOperator.fields().map { it.fieldName } + expression.alias!!).distinct().map { Field(alias, it) }
+        override fun fields() = sourceOperator.fields().filterNot { it.fieldName == expression.alias!!} + Field(alias, expression.alias!!)
         override fun children() = listOf(sourceOperator)
     }
 
     data class Filter(var predicate: Ast.Expression, var sourceOperator: LogicalOperator): LogicalOperator() {
-        override fun fields() = sourceOperator.fields().map { Field(alias, it.fieldName) }
+        override fun fields() = sourceOperator.fields()
         override fun children() = listOf(sourceOperator)
     }
 
     data class Sort(var sortExpressions: List<Ast.OrderExpr>, var sourceOperator: LogicalOperator): LogicalOperator() {
-        override fun fields() = sourceOperator.fields().map { Field(alias, it.fieldName) }
+        override fun fields() = sourceOperator.fields()
         override fun children() = listOf(sourceOperator)
     }
 
     data class Limit(var limit: Int, var sourceOperator: LogicalOperator): LogicalOperator() {
-        override fun fields() = sourceOperator.fields().map { Field(alias, it.fieldName) }
+        override fun fields() = sourceOperator.fields()
         override fun children() = listOf(sourceOperator)
     }
 
@@ -132,7 +131,7 @@ private fun populateFields(operator: LogicalOperator, neededFields: List<String>
         is LogicalOperator.Project -> {
             // Make sure all columns are named
             operator.expressions = operator.expressions.mapIndexed { index, expr ->
-                val alias = expr.alias ?: if(expr.expression is Ast.Expression.Identifier) expr.expression.identifier else "_col$index"
+                val alias = expr.alias ?: if(expr.expression is Ast.Expression.Identifier) expr.expression.field.fieldName else "_col$index"
                 Ast.NamedExpr(expr.expression, alias)
             }
 
@@ -144,7 +143,7 @@ private fun populateFields(operator: LogicalOperator, neededFields: List<String>
         is LogicalOperator.GroupBy -> {
             // Make sure all columns are named
             operator.expressions = operator.expressions.mapIndexed { index, expr ->
-                val alias = expr.alias ?: if(expr.expression is Ast.Expression.Identifier) expr.expression.identifier else "_col$index"
+                val alias = expr.alias ?: if(expr.expression is Ast.Expression.Identifier) expr.expression.field.fieldName else "_col$index"
                 Ast.NamedExpr(expr.expression, alias)
             }
 
@@ -168,7 +167,7 @@ private fun populateFields(operator: LogicalOperator, neededFields: List<String>
         is LogicalOperator.LateralView -> {
             val upstreamFieldsNeeded = (neededFields(operator.expression.expression) + neededFields).distinct()
             val expr = operator.expression.expression
-            val alias = operator.expression.alias ?: if(expr is Ast.Expression.Identifier) expr.identifier else null
+            val alias = operator.expression.alias ?: if(expr is Ast.Expression.Identifier) expr.field.fieldName else null
             semanticAssert(alias != null, "Lateral View must have alias")
             operator.expression = operator.expression.copy(alias = alias)
             populateFields(operator.sourceOperator, upstreamFieldsNeeded)
@@ -194,7 +193,7 @@ private fun checkForAggregate(expr: Ast.Expression) : Boolean {
 
 private fun neededFields(expression: Ast.Expression): List<String> {
     return when (expression) {
-        is Ast.Expression.Identifier -> listOf(expression.identifier)
+        is Ast.Expression.Identifier -> listOf(expression.field.fieldName)
         is Ast.Expression.Constant -> listOf()
         is Ast.Expression.Function -> expression.parameters.flatMap(::neededFields)
     }.distinct()
@@ -213,18 +212,19 @@ private fun normalizeIdentifiers(expression: Ast.Expression, tableAliasesInScope
             if (expression.functionName == "idx" && expression.parameters.size == 2) {
                 val arg1 = expression.parameters[0]
                 val arg2 = expression.parameters[1]
-                if (arg1 is Ast.Expression.Identifier && arg1.identifier in tableAliasesInScope) {
+                if (arg1 is Ast.Expression.Identifier && arg1.field.fieldName in tableAliasesInScope) {
                     // This is one we need to fix, child element should either be an constant or
                     // another idx function but this may not be the case if someone is manually using
                     // the idx something to do something weird
+                    val tableAlias = arg1.field.fieldName
                     when(arg2) {
                         is Ast.Expression.Constant -> {
-                            if (arg2.value is String) return Ast.Expression.Identifier(arg2.value, arg1.identifier)
+                            if (arg2.value is String) return Ast.Expression.Identifier(Field(tableAlias, arg2.value))
                         }
                         is Ast.Expression.Function -> {
                             if(arg2.functionName == "idx" && (arg2.parameters.first() is Ast.Expression.Constant)) {
                                 val identifierConst = arg2.parameters.first() as Ast.Expression.Constant
-                                val identifier = Ast.Expression.Identifier(identifierConst.value as String, arg1.identifier)
+                                val identifier = Ast.Expression.Identifier(Field(tableAlias, identifierConst.value as String))
                                 val params = listOf(identifier) + arg2.parameters.drop(1)
                                 return Ast.Expression.Function("idx", params)
                             }

@@ -1,5 +1,6 @@
 package jsonsql.physical.operators
 
+import jsonsql.ast.Field
 import jsonsql.fileformats.JsonReader
 import jsonsql.physical.PhysicalOperator
 
@@ -7,7 +8,7 @@ import jsonsql.physical.PhysicalOperator
 class DescribeOperator(val path: String): PhysicalOperator() {
     private val columns: Iterator<Pair<String,String>> by lazy(::scanTable)
 
-    override fun columnAliases() = listOf("column_name", "column_type")
+    override fun columnAliases() = listOf("column_name", "column_type").map { Field(null, it) }
 
     override fun compile() {}
 

@@ -25,7 +25,7 @@ sealed class Ast {
         // The table alias here will always be null coming out of the parse function as we can't
         // tell the difference between a table_alias.field vs a field.subfield until we've done
         // some semantic analysis in the logical phase of query planning
-        data class Identifier(val identifier: String, val tableAlias: String?): Expression()
+        data class Identifier(val field: Field): Expression()
     }
 
     data class Table(val path: String): Ast()
@@ -35,6 +35,10 @@ sealed class Ast {
         data class InlineView(val inlineView: Ast.Statement.Select, val tableAlias: String?): Source()
         data class LateralView(val source: Source, val expression: NamedExpr): Source()
     }
+}
+
+data class Field(val tableAlias: String?, val fieldName: String) {
+    override fun toString() = tableAlias?.let { "$it.$fieldName" } ?: fieldName
 }
 
 
@@ -141,7 +145,7 @@ private fun parseExpression(node: SqlParser.ExprContext): Ast.Expression {
 }
 
 private fun parseIdentifier(node: TerminalNode): Ast.Expression {
-    return Ast.Expression.Identifier(node.text.toLowerCase(), null)
+    return Ast.Expression.Identifier(Field(null,node.text.toLowerCase()))
 }
 
 private fun parseFunctionCall(node: SqlParser.Function_callContext): Ast.Expression.Function {

@@ -1,6 +1,7 @@
 package jsonsql.physical.operators
 
 import jsonsql.ast.Ast
+import jsonsql.ast.Field
 import jsonsql.functions.ArrayInspector
 import jsonsql.physical.ExpressionExecutor
 import jsonsql.physical.PhysicalOperator
@@ -11,14 +12,14 @@ class LateralViewOperator(val expression: Ast.NamedExpr, val source: PhysicalOpe
     private var shadowedFieldIdx: Int = -1
     private var subViewIter : Iterator<List<Any?>> = listOf<List<Any?>>().iterator()
 
-    override fun columnAliases(): List<String> {
+    override fun columnAliases(): List<Field> {
         // Shadowing implemented  here as it seems like it will be a common case
-        return (source.columnAliases() - expression.alias!!) + expression.alias
+        return source.columnAliases().filterNot { it.fieldName ==  expression.alias } + Field(null, expression.alias!!)
     }
 
     override fun compile() {
         source.compile()
-        shadowedFieldIdx = source.columnAliases().indexOf(expression.alias!!)
+        shadowedFieldIdx = source.columnAliases().indexOfFirst { it.fieldName == expression.alias }
         compiledExpression = compileExpression(expression.expression, source.columnAliases())
     }
 

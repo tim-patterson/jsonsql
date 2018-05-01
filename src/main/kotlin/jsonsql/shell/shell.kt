@@ -123,7 +123,7 @@ fun renderTable(terminal: Terminal, operator: PhysicalOperator) {
     val startTime = System.currentTimeMillis()
     // Get the first 1000 rows to get a good guess on column width etc
     val rowBuffer = mutableListOf<List<String>>()
-    val maxWidths = operator.columnAliases().map(String::length).toMutableList()
+    val maxWidths = operator.columnAliases().map{ it.fieldName.length }.toMutableList()
 
     var rowCount = 0
 
@@ -142,7 +142,7 @@ fun renderTable(terminal: Terminal, operator: PhysicalOperator) {
     ).toAnsi(terminal)
 
     terminal.writer().println(horizontalLine)
-    terminal.writer().println(renderLine(operator.columnAliases(), maxWidths, headerStyle).toAnsi(terminal))
+    terminal.writer().println(renderLine(operator.columnAliases().map { it.fieldName }, maxWidths, headerStyle).toAnsi(terminal))
     terminal.writer().println(horizontalLine)
     rowBuffer.forEach {
         terminal.writer().println(renderLine(it, maxWidths).toAnsi(terminal))

@@ -1,13 +1,14 @@
 package jsonsql.physical
 
 import jsonsql.ast.Ast
+import jsonsql.ast.Field
 import jsonsql.filesystems.FileSystem
 import jsonsql.logical.LogicalOperator
 import jsonsql.physical.operators.*
 
 abstract class PhysicalOperator: AutoCloseable {
     abstract fun compile()
-    abstract fun columnAliases(): List<String>
+    abstract fun columnAliases(): List<Field>
     abstract fun next(): List<Any?>?
     // Only used for the explain output
     open fun children(): List<PhysicalOperator> = listOf()
@@ -24,9 +25,9 @@ private fun physicalOperator(operator: LogicalOperator, pathOverride: String? = 
         is LogicalOperator.Limit -> LimitOperator(operator.limit, physicalOperator(operator.sourceOperator, pathOverride))
         is LogicalOperator.Sort -> SortOperator(operator.sortExpressions, physicalOperator(operator.sourceOperator, pathOverride))
         is LogicalOperator.Describe -> DescribeOperator(operator.tableDefinition.path)
-        is LogicalOperator.DataSource -> TableScanOperator(pathOverride ?: operator.tableDefinition.path, operator.fields().map { it.fieldName })
+        is LogicalOperator.DataSource -> TableScanOperator(pathOverride ?: operator.tableDefinition.path, operator.fields().map { it.fieldName }, operator.alias)
         is LogicalOperator.Explain -> ExplainOperator(physicalOperator(operator.sourceOperator, pathOverride))
-        is LogicalOperator.Project -> ProjectOperator(operator.expressions, physicalOperator(operator.sourceOperator, pathOverride))
+        is LogicalOperator.Project -> ProjectOperator(operator.expressions, physicalOperator(operator.sourceOperator, pathOverride), operator.alias)
         is LogicalOperator.Filter -> FilterOperator(operator.predicate, physicalOperator(operator.sourceOperator, pathOverride))
         is LogicalOperator.LateralView -> LateralViewOperator(operator.expression, physicalOperator(operator.sourceOperator, pathOverride))
         is LogicalOperator.GroupBy -> {
@@ -37,7 +38,7 @@ private fun physicalOperator(operator: LogicalOperator, pathOverride: String? = 
                 val sortExpr = operator.groupByExpressions.map { Ast.OrderExpr(it, true) }
                 sourceOperator = SortOperator(sortExpr, sourceOperator)
             }
-            GroupByOperator(operator.expressions, operator.groupByExpressions, sourceOperator)
+            GroupByOperator(operator.expressions, operator.groupByExpressions, sourceOperator, operator.alias)
         }
         is LogicalOperator.Gather -> {
             val tableSource = getTableSource(operator.sourceOperator)

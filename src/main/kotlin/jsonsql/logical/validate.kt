@@ -1,6 +1,7 @@
 package jsonsql.logical
 
 import jsonsql.ast.Ast
+import jsonsql.ast.Field
 import jsonsql.functions.Function
 import jsonsql.functions.functionRegistry
 import jsonsql.safe
@@ -31,14 +32,14 @@ private fun validateExpression(expression: Ast.Expression, sourceFields: List<Fi
     when(expression) {
         is Ast.Expression.Constant -> null
         is Ast.Expression.Identifier -> {
-            if (expression.tableAlias != null) {
-                val fullIdent = Field(expression.tableAlias, expression.identifier)
-                semanticAssert(fullIdent in sourceFields, "${expression.tableAlias}.${expression.identifier} not found in $sourceFields")
+            val field = expression.field
+            if (field.tableAlias != null) {
+                semanticAssert(field in sourceFields, "$field not found in $sourceFields")
             } else {
-                val matchCount = sourceFields.count { it.fieldName == expression.identifier }
+                val matchCount = sourceFields.count { it.fieldName == field.fieldName }
 
-                semanticAssert(matchCount > 0, "${expression.identifier} not found in $sourceFields")
-                semanticAssert(matchCount == 1, "${expression.identifier} is ambiguous in  $sourceFields")
+                semanticAssert(matchCount > 0, "$field not found in $sourceFields")
+                semanticAssert(matchCount == 1, "$field is ambiguous in  $sourceFields")
             }
 
             null

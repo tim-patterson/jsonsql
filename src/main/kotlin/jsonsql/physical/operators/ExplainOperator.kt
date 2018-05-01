@@ -1,11 +1,12 @@
 package jsonsql.physical.operators
 
+import jsonsql.ast.Field
 import jsonsql.physical.PhysicalOperator
 
 class ExplainOperator(val stmt: PhysicalOperator): PhysicalOperator() {
     private lateinit var plan: Iterator<String>
 
-    override fun columnAliases() = listOf("plan")
+    override fun columnAliases() = listOf(Field(null, "plan"))
 
     override fun compile() {
         stmt.compile()

@@ -1,12 +1,15 @@
 package jsonsql.physical.operators
 
 import jsonsql.ast.Ast
+import jsonsql.ast.Field
 import jsonsql.physical.*
 
-class GroupByOperator(val expressions: List<Ast.NamedExpr>, val groupByKeys: List<Ast.Expression>, val source: PhysicalOperator): PhysicalOperator() {
+class GroupByOperator(val expressions: List<Ast.NamedExpr>, val groupByKeys: List<Ast.Expression>, val source: PhysicalOperator, val tableAlias: String?): PhysicalOperator() {
     private lateinit var compiledExpressions: List<AggregateExpressionExecutor>
     private lateinit var compiledGroupExpressions: List<ExpressionExecutor>
-    override fun columnAliases() = expressions.map { it.alias!! }
+
+    override fun columnAliases() = expressions.map { Field(tableAlias, it.alias!!) }
+
     private var currentGroupKeys: List<Any?>? = null
 
     // When there are no group by keys and no rows we still expect a row of output

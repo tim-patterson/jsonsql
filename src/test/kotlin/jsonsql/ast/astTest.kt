@@ -44,7 +44,7 @@ object AstSpec: Spek({
         }
 
         it("lower cases identifiers") {
-            testExpression("ABC", Identifier("abc", null))
+            testExpression("ABC", Identifier(Field(null, "abc")))
         }
     }
 
