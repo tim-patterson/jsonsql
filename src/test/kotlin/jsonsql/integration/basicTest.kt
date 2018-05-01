@@ -92,6 +92,16 @@ object AstSpec: Spek({
             """.trimIndent())
         }
     }
+
+    describe("Table Aliases") {
+        it("with as") {
+            testExpression("select my_tbl.rownum, rownum from json 'test_data/nested.json' as my_tbl limit 3;", """
+                1.0 | 1.0
+                2.0 | 2.0
+                3.0 | 3.0
+            """.trimIndent())
+        }
+    }
 })
 
 private fun testExpression(expr: String, expected: String) {

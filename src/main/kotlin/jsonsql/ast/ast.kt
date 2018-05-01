@@ -22,14 +22,17 @@ sealed class Ast {
     sealed class Expression: Ast() {
         data class Function(val functionName: String, val parameters: List<Expression>) : Expression()
         data class Constant(val value: Any?) : Expression()
-        data class Identifier(val identifier: String): Expression()
+        // The table alias here will always be null coming out of the parse function as we can't
+        // tell the difference between a table_alias.field vs a field.subfield until we've done
+        // some semantic analysis in the logical phase of query planning
+        data class Identifier(val identifier: String, val tableAlias: String?): Expression()
     }
 
     data class Table(val path: String): Ast()
 
     sealed class Source: Ast() {
-        data class Table(val table: Ast.Table): Source()
-        data class InlineView(val inlineView: Ast.Statement.Select): Source()
+        data class Table(val table: Ast.Table, val tableAlias: String?): Source()
+        data class InlineView(val inlineView: Ast.Statement.Select, val tableAlias: String?): Source()
         data class LateralView(val source: Source, val expression: NamedExpr): Source()
     }
 }
@@ -79,8 +82,8 @@ private fun parseSelectStmt(select: SqlParser.Select_stmtContext): Ast.Statement
 
 private fun parseSource(source: SqlParser.Table_or_subqueryContext): Ast.Source {
     return when {
-        source.table() != null -> Ast.Source.Table(parseTable(source.table()))
-        source.subquery() != null -> Ast.Source.InlineView(parseSelectStmt(source.subquery().select_stmt()))
+        source.table() != null -> Ast.Source.Table(parseTable(source.table()), source.IDENTIFIER()?.text?.toLowerCase())
+        source.subquery() != null -> Ast.Source.InlineView(parseSelectStmt(source.subquery().select_stmt()), source.IDENTIFIER()?.text?.toLowerCase())
         source.lateral_view() != null -> Ast.Source.LateralView(parseSource(source.table_or_subquery()), parseNamedExpression(source.lateral_view().named_expr()))
         else -> malformedAntlrCtx()
     }
@@ -138,7 +141,7 @@ private fun parseExpression(node: SqlParser.ExprContext): Ast.Expression {
 }
 
 private fun parseIdentifier(node: TerminalNode): Ast.Expression {
-    return Ast.Expression.Identifier(node.text.toLowerCase())
+    return Ast.Expression.Identifier(node.text.toLowerCase(), null)
 }
 
 private fun parseFunctionCall(node: SqlParser.Function_callContext): Ast.Expression.Function {

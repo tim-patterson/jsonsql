@@ -20,7 +20,7 @@ object AstSpec: Spek({
             assertThat(parse("select 1 from json 'dummy';"), equalTo(
                     Select(
                             listOf(NamedExpr(Constant(1.0), null)),
-                            Source.Table(Table("dummy"))
+                            Source.Table(Table("dummy"), null)
                     ) as Statement
             ))
         }
@@ -44,7 +44,7 @@ object AstSpec: Spek({
         }
 
         it("lower cases identifiers") {
-            testExpression("ABC", Identifier("abc"))
+            testExpression("ABC", Identifier("abc", null))
         }
     }
 

@@ -71,8 +71,8 @@ lateral_view
   ;
 
 table_or_subquery
-  : table
-  | subquery
+  : table (AS? IDENTIFIER)?
+  | subquery (AS? IDENTIFIER)?
   | table_or_subquery lateral_view
   ;
 
