@@ -34,6 +34,7 @@ sealed class Ast {
         data class Table(val table: Ast.Table, val tableAlias: String?): Source()
         data class InlineView(val inlineView: Ast.Statement.Select, val tableAlias: String?): Source()
         data class LateralView(val source: Source, val expression: NamedExpr): Source()
+        data class Join(val source1: Source, val source2: Source, val joinCondition: Expression): Source()
     }
 }
 
@@ -76,7 +77,7 @@ private fun parseDescribeStmt(describe: SqlParser.Describe_stmtContext): Ast.Sta
 
 private fun parseSelectStmt(select: SqlParser.Select_stmtContext): Ast.Statement.Select {
     val expressions = select.named_expr().map(::parseNamedExpression)
-    val source = parseSource(select.table_or_subquery())
+    val source = parseSource(select.source())
     val limit = select.NUMERIC_LITERAL()?.let { Integer.parseInt(it.text) }
     val predicate = select.predicate()?.let { parseExpression(select.predicate().expr()) }
     val groupBy = select.group_by()?.let { it.expr().map(::parseExpression) }
@@ -84,11 +85,20 @@ private fun parseSelectStmt(select: SqlParser.Select_stmtContext): Ast.Statement
     return Ast.Statement.Select(expressions, source, predicate, groupBy, orderBy, limit)
 }
 
-private fun parseSource(source: SqlParser.Table_or_subqueryContext): Ast.Source {
+private fun parseSource(source: SqlParser.SourceContext): Ast.Source {
+    var operator = parseTableOrSubquery(source.table_or_subquery())
+
+    source.join().forEach { join ->
+        operator = Ast.Source.Join(operator, parseTableOrSubquery(join.table_or_subquery()), parseExpression(join.expr()))
+    }
+    return operator
+}
+
+private fun parseTableOrSubquery(source: SqlParser.Table_or_subqueryContext): Ast.Source {
     return when {
         source.table() != null -> Ast.Source.Table(parseTable(source.table()), source.IDENTIFIER()?.text?.toLowerCase())
         source.subquery() != null -> Ast.Source.InlineView(parseSelectStmt(source.subquery().select_stmt()), source.IDENTIFIER()?.text?.toLowerCase())
-        source.lateral_view() != null -> Ast.Source.LateralView(parseSource(source.table_or_subquery()), parseNamedExpression(source.lateral_view().named_expr()))
+        source.lateral_view() != null -> Ast.Source.LateralView(parseTableOrSubquery(source.table_or_subquery()), parseNamedExpression(source.lateral_view().named_expr()))
         else -> malformedAntlrCtx()
     }
 }

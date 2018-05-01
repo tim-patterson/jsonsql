@@ -35,6 +35,7 @@ class GatherOperator(val sources: List<PhysicalOperator>): PhysicalOperator() {
     }
 
     override fun close() {
+        queue.clear()
         executorPool.shutdownNow()
         queue.clear()
         sources.forEach { it.close() }

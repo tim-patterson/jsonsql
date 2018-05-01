@@ -27,6 +27,16 @@ fun parallelize(logicalOperator: LogicalOperator): Boolean {
             }
             false
         }
+        is LogicalOperator.Join -> {
+            if (parallelize(logicalOperator.sourceOperator1)) {
+                logicalOperator.sourceOperator1 = LogicalOperator.Gather(logicalOperator.sourceOperator1)
+            }
+
+            if (parallelize(logicalOperator.sourceOperator2)) {
+                logicalOperator.sourceOperator2 = LogicalOperator.Gather(logicalOperator.sourceOperator2)
+            }
+            false
+        }
         is LogicalOperator.Gather -> false
 
         else -> logicalOperator.children().all { parallelize(it) }

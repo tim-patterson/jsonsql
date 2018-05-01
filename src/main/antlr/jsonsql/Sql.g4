@@ -11,7 +11,7 @@ stmt
   ;
 
 select_stmt
-  : SELECT named_expr ( ',' named_expr )* FROM table_or_subquery predicate? group_by? order_by? (LIMIT NUMERIC_LITERAL)?
+  : SELECT named_expr ( ',' named_expr )* FROM source predicate? group_by? order_by? (LIMIT NUMERIC_LITERAL)?
   ;
 
 named_expr
@@ -70,6 +70,14 @@ lateral_view
   : LATERAL VIEW named_expr
   ;
 
+join
+  : JOIN table_or_subquery ON expr
+  ;
+
+source
+  : table_or_subquery (join)*
+  ;
+
 table_or_subquery
   : table (AS? IDENTIFIER)?
   | subquery (AS? IDENTIFIER)?
@@ -99,6 +107,8 @@ NOT: N O T;
 NULL: N U L L;
 LATERAL: L A T E R A L;
 VIEW: V I E W;
+JOIN: J O I N;
+ON: O N;
 
 
 OP_PLUS: '+';

@@ -58,6 +58,11 @@ sealed class LogicalOperator {
         override fun children() = listOf(sourceOperator)
     }
 
+    data class Join(var sourceOperator1: LogicalOperator, var sourceOperator2: LogicalOperator, var onClause: Ast.Expression): LogicalOperator() {
+        override fun fields() = sourceOperator1.fields() + sourceOperator2.fields()
+        override fun children() = listOf(sourceOperator1, sourceOperator2)
+    }
+
     data class Gather(var sourceOperator: LogicalOperator): LogicalOperator() {
         override fun fields() = sourceOperator.fields()
         override fun children() = listOf(sourceOperator)
@@ -87,7 +92,17 @@ private fun fromSource(node: Ast.Source): LogicalOperator {
             val expr = (node.expression.copy(expression = normalizeIdentifiers(node.expression.expression, aliases)))
             LogicalOperator.LateralView(expr, source)
         }
+        is Ast.Source.Join -> fromJoin(node)
     }
+}
+
+
+private fun fromJoin(node: Ast.Source.Join): LogicalOperator.Join {
+    val sourceOperator1 = fromSource(node.source1)
+    val sourceOperator2 = fromSource(node.source2)
+    val aliases = sourceOperator1.aliasesInScope() + sourceOperator2.aliasesInScope()
+    val expr = normalizeIdentifiers(node.joinCondition, aliases)
+    return LogicalOperator.Join(sourceOperator1, sourceOperator2, expr)
 }
 
 
@@ -126,7 +141,7 @@ private fun fromTable(node: Ast.Table): LogicalOperator.DataSource {
 }
 
 
-private fun populateFields(operator: LogicalOperator, neededFields: List<String> = listOf()) {
+private fun populateFields(operator: LogicalOperator, neededFields: List<Field> = listOf()) {
     when(operator) {
         is LogicalOperator.Project -> {
             // Make sure all columns are named
@@ -172,8 +187,15 @@ private fun populateFields(operator: LogicalOperator, neededFields: List<String>
             operator.expression = operator.expression.copy(alias = alias)
             populateFields(operator.sourceOperator, upstreamFieldsNeeded)
         }
-        is LogicalOperator.DataSource -> operator.fields = neededFields
-        else -> operator.children().map { populateFields(it) }
+        is LogicalOperator.Join -> {
+            val upstreamFieldsNeeded = (neededFields(operator.onClause) + neededFields).distinct()
+            populateFields(operator.sourceOperator1, upstreamFieldsNeeded)
+            populateFields(operator.sourceOperator2, upstreamFieldsNeeded)
+        }
+        is LogicalOperator.DataSource -> {
+            operator.fields = neededFields.filter { it.tableAlias == null || it.tableAlias == operator.alias }.map { it.fieldName }.distinct()
+        }
+        else -> operator.children().forEach { populateFields(it) }
     }
 }
 
@@ -191,9 +213,9 @@ private fun checkForAggregate(expr: Ast.Expression) : Boolean {
 }
 
 
-private fun neededFields(expression: Ast.Expression): List<String> {
+private fun neededFields(expression: Ast.Expression): List<Field> {
     return when (expression) {
-        is Ast.Expression.Identifier -> listOf(expression.field.fieldName)
+        is Ast.Expression.Identifier -> listOf(expression.field)
         is Ast.Expression.Constant -> listOf()
         is Ast.Expression.Function -> expression.parameters.flatMap(::neededFields)
     }.distinct()

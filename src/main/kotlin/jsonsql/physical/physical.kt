@@ -30,6 +30,7 @@ private fun physicalOperator(operator: LogicalOperator, pathOverride: String? = 
         is LogicalOperator.Project -> ProjectOperator(operator.expressions, physicalOperator(operator.sourceOperator, pathOverride), operator.alias)
         is LogicalOperator.Filter -> FilterOperator(operator.predicate, physicalOperator(operator.sourceOperator, pathOverride))
         is LogicalOperator.LateralView -> LateralViewOperator(operator.expression, physicalOperator(operator.sourceOperator, pathOverride))
+        is LogicalOperator.Join -> JoinOperator(operator.onClause, physicalOperator(operator.sourceOperator1), physicalOperator(operator.sourceOperator2))
         is LogicalOperator.GroupBy -> {
             var sourceOperator = physicalOperator(operator.sourceOperator, pathOverride)
             // The logical group by is performed by a sort by the group by keys followed by the actual group by operator
