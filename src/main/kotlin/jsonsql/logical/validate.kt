@@ -27,10 +27,22 @@ fun validate(operator: LogicalOperator) {
     operator.children().map { validate(it) }
 }
 
-private fun validateExpression(expression: Ast.Expression, sourceFields: List<String>, allowAggregate: Boolean = false) {
+private fun validateExpression(expression: Ast.Expression, sourceFields: List<Field>, allowAggregate: Boolean = false) {
     when(expression) {
         is Ast.Expression.Constant -> null
-        is Ast.Expression.Identifier -> {semanticAssert(expression.identifier in sourceFields, "${expression.identifier} not found in $sourceFields"); null}
+        is Ast.Expression.Identifier -> {
+            if (expression.tableAlias != null) {
+                val fullIdent = Field(expression.tableAlias, expression.identifier)
+                semanticAssert(fullIdent in sourceFields, "${expression.tableAlias}.${expression.identifier} not found in $sourceFields")
+            } else {
+                val matchCount = sourceFields.count { it.fieldName == expression.identifier }
+
+                semanticAssert(matchCount > 0, "${expression.identifier} not found in $sourceFields")
+                semanticAssert(matchCount == 1, "${expression.identifier} is ambiguous in  $sourceFields")
+            }
+
+            null
+        }
         is Ast.Expression.Function -> {
             semanticAssert(expression.functionName in functionRegistry, "function \"${expression.functionName}\" not found")
             val function = functionRegistry[expression.functionName]!!

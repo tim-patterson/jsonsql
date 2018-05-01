@@ -24,7 +24,7 @@ private fun physicalOperator(operator: LogicalOperator, pathOverride: String? = 
         is LogicalOperator.Limit -> LimitOperator(operator.limit, physicalOperator(operator.sourceOperator, pathOverride))
         is LogicalOperator.Sort -> SortOperator(operator.sortExpressions, physicalOperator(operator.sourceOperator, pathOverride))
         is LogicalOperator.Describe -> DescribeOperator(operator.tableDefinition.path)
-        is LogicalOperator.DataSource -> TableScanOperator(pathOverride ?: operator.tableDefinition.path, operator.fields())
+        is LogicalOperator.DataSource -> TableScanOperator(pathOverride ?: operator.tableDefinition.path, operator.fields().map { it.fieldName })
         is LogicalOperator.Explain -> ExplainOperator(physicalOperator(operator.sourceOperator, pathOverride))
         is LogicalOperator.Project -> ProjectOperator(operator.expressions, physicalOperator(operator.sourceOperator, pathOverride))
         is LogicalOperator.Filter -> FilterOperator(operator.predicate, physicalOperator(operator.sourceOperator, pathOverride))

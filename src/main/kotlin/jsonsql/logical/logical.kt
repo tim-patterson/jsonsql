@@ -4,56 +4,58 @@ import jsonsql.ast.Ast
 import jsonsql.functions.Function
 import jsonsql.functions.functionRegistry
 
+data class Field(val tableAlias: String?, val fieldName: String)
 
 sealed class LogicalOperator {
-    abstract fun fields(): List<String>
+    abstract fun fields(): List<Field>
     abstract fun children(): List<LogicalOperator>
     // An Alias can be set at a operator level (ie table, or subselect)
     var alias: String? = null
+    // this is really aliases in scope for anything that uses this operator as a source
     open fun aliasesInScope(): List<String> = alias?.let { listOf(it) } ?: children().flatMap { it.aliasesInScope() }
 
     data class Project(var expressions: List<Ast.NamedExpr>, var sourceOperator: LogicalOperator): LogicalOperator() {
-        override fun fields() = expressions.map { it.alias!! }
+        override fun fields() = expressions.map { Field(alias, it.alias!!) }
         override fun children() = listOf(sourceOperator)
     }
 
     data class LateralView(var expression: Ast.NamedExpr, var sourceOperator: LogicalOperator): LogicalOperator() {
-        override fun fields() = (sourceOperator.fields() + expression.alias!!).distinct()
+        override fun fields() = (sourceOperator.fields().map { it.fieldName } + expression.alias!!).distinct().map { Field(alias, it) }
         override fun children() = listOf(sourceOperator)
     }
 
     data class Filter(var predicate: Ast.Expression, var sourceOperator: LogicalOperator): LogicalOperator() {
-        override fun fields() = sourceOperator.fields()
+        override fun fields() = sourceOperator.fields().map { Field(alias, it.fieldName) }
         override fun children() = listOf(sourceOperator)
     }
 
     data class Sort(var sortExpressions: List<Ast.OrderExpr>, var sourceOperator: LogicalOperator): LogicalOperator() {
-        override fun fields() = sourceOperator.fields()
+        override fun fields() = sourceOperator.fields().map { Field(alias, it.fieldName) }
         override fun children() = listOf(sourceOperator)
     }
 
     data class Limit(var limit: Int, var sourceOperator: LogicalOperator): LogicalOperator() {
-        override fun fields() = sourceOperator.fields()
+        override fun fields() = sourceOperator.fields().map { Field(alias, it.fieldName) }
         override fun children() = listOf(sourceOperator)
     }
 
     data class Describe(var tableDefinition: Ast.Table): LogicalOperator() {
-        override fun fields() = listOf("column_name", "column_type")
+        override fun fields() = listOf("column_name", "column_type").map { Field(alias, it) }
         override fun children() = listOf<LogicalOperator>()
     }
 
     data class DataSource(var fields: List<String>, var tableDefinition: Ast.Table): LogicalOperator() {
-        override fun fields() = fields
+        override fun fields() = fields.map { Field(alias, it) }
         override fun children() = listOf<LogicalOperator>()
     }
 
     data class Explain(var sourceOperator: LogicalOperator): LogicalOperator() {
-        override fun fields() = listOf("plan")
+        override fun fields() = listOf(Field(null, "plan"))
         override fun children() = listOf(sourceOperator)
     }
 
     data class GroupBy(var expressions: List<Ast.NamedExpr>, var groupByExpressions: List<Ast.Expression>, var sourceOperator: LogicalOperator): LogicalOperator() {
-        override fun fields() = expressions.map { it.alias!! }
+        override fun fields() = expressions.map { Field(alias, it.alias!!) }
         override fun children() = listOf(sourceOperator)
     }
 
@@ -197,6 +199,8 @@ private fun neededFields(expression: Ast.Expression): List<String> {
         is Ast.Expression.Function -> expression.parameters.flatMap(::neededFields)
     }.distinct()
 }
+
+
 
 // Tablename.identifer will be wrongly represented as idx(Tablename, identifier)
 // Tablename.identifer.subfield will be idx(Tablename, idx(identifier, subfield))
