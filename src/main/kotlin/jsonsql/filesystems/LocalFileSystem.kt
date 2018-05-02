@@ -2,16 +2,22 @@ package jsonsql.filesystems
 
 import java.io.File
 import java.io.InputStream
-
+import java.net.URI
 
 object LocalFileSystem: FileSystem {
-    override fun listDir(authority: String, path: String): List<String> {
-        // for relative dirs the url parser will parse the first path component as the authority
-        val filePath = if (authority.isEmpty()) path else "$authority/$path"
-        return File(filePath).walk().filter { it.isFile }.map { it.absoluteFile.path }.toList()
+    override fun listDir(path: String): List<String> {
+        return file(path).walk().filter { it.isFile }.map { it.absoluteFile.toURI().toString() }.toList()
     }
 
-    override fun open(authority: String, path: String): InputStream {
-        return File(path).inputStream()
+    override fun open(path: String): InputStream {
+        return file(path).inputStream()
+    }
+
+    private fun file(path: String): File {
+        return if(path.startsWith("file:")) {
+            File(URI.create(path))
+        } else {
+            File(path)
+        }
     }
 }

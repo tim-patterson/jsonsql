@@ -1,28 +1,42 @@
 package jsonsql.filesystems
 
+import com.amazonaws.SdkClientException
+import com.amazonaws.regions.DefaultAwsRegionProviderChain
+import com.amazonaws.regions.Region
+import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import java.io.InputStream
+import java.net.URI
 
 
 object S3FileSystem: FileSystem {
 
-    private val s3 = AmazonS3ClientBuilder.defaultClient()
+    private val s3 = AmazonS3ClientBuilder.standard()
+            .withForceGlobalBucketAccessEnabled(true)
+            .withRegion(try { DefaultAwsRegionProviderChain().region } catch (e: SdkClientException) { "ap-southeast-2" })
+            .build()
 
-    override fun listDir(authority: String, path: String): List<String> {
+    override fun listDir(path: String): List<String> {
+        val s3Uri = URI.create(path)
+        val authority = s3Uri.authority
+        val prefix = s3Uri.path.trimStart('/')
         val results = mutableListOf<String>()
 
-        var listing = s3.listObjects(authority, path.trimStart('/'))
-        results.addAll(listing.objectSummaries.filter { it.size > 0 }.map { "$authority/${it.key}" })
+        var listing = s3.listObjects(authority, prefix)
+        results.addAll(listing.objectSummaries.filter { it.size > 0 }.map { "s3://$authority/${it.key}" })
 
         while(listing.isTruncated) {
             listing = s3.listNextBatchOfObjects(listing)
-            results.addAll(listing.objectSummaries.filter { it.size > 0 }.map { "$authority/${it.key}" })
+            results.addAll(listing.objectSummaries.filter { it.size > 0 }.map { "s3://$authority/${it.key}" })
         }
         return results
     }
 
-    override fun open(authority: String, path: String): InputStream {
-        return s3.getObject(authority, path.trimStart('/')).objectContent
+    override fun open(path: String): InputStream {
+        val s3Uri = URI.create(path)
+        val authority = s3Uri.authority
+        val key = s3Uri.path.trimStart('/')
+        return s3.getObject(authority, key).objectContent
     }
 
 }

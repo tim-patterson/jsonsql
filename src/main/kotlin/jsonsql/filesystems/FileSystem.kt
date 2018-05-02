@@ -4,22 +4,16 @@ import java.io.InputStream
 import java.net.URI
 
 interface FileSystem {
-    fun listDir(authority: String, path: String): List<String>
-    fun open(authority: String, path: String): InputStream
+    fun listDir(path: String): List<String>
+    fun open(path: String): InputStream
 
     companion object {
-        fun listDir(directory: String): List<String> {
-            val uri = URI.create(directory)
-            val scheme = uri.scheme ?: "file"
-
-            return fileSystem(directory).listDir(uri.authority.orEmpty(), uri.path).map {
-                URI(scheme,"//$it",null).toString()
-            }
+        fun listDir(path: String): List<String> {
+            return fileSystem(path).listDir(path)
         }
 
-        fun open(file: String): InputStream {
-            val uri = URI.create(file)
-            return fileSystem(file).open(uri.authority.orEmpty(), uri.path)
+        fun open(path: String): InputStream {
+            return fileSystem(path).open(path)
         }
 
         private fun fileSystem(path: String): FileSystem {
