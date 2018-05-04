@@ -67,10 +67,10 @@ object BasicTest: Spek({
         }
 
         it("[] function") {
-            testQuery("select rownum, arrayval[1], arrayval['1'], structval['inner_key'] from json 'test_data/nested.json' limit 3;", """
-                1.0 | a2 | a2 | a
-                2.0 | b2 | b2 | b
-                3.0 | c2 | c2 | c
+            testQuery("select rownum, arrayval[1], arrayval['1'], arrayval[6], structval['inner_key'] from json 'test_data/nested.json' limit 3;", """
+                1.0 | a2 | a2 | null | a
+                2.0 | b2 | b2 | null | b
+                3.0 | c2 | c2 | null | c
             """.trimIndent())
         }
 

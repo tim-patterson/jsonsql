@@ -37,7 +37,7 @@ object IndexFunction: TwoArgScalarFunction() {
         val array = ArrayInspector.inspect(arg1)
         array?.let {
             val key = NumberInspector.inspect(arg2) ?: return null
-            return array[key.toInt()]
+            return array.elementAtOrNull(key.toInt())
         }
 
         val map = MapInspector.inspect(arg1)
