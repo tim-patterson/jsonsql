@@ -158,7 +158,7 @@ private fun populateFields(operator: LogicalOperator, neededFields: List<Field> 
         is LogicalOperator.GroupBy -> {
             // Make sure all columns are named
             operator.expressions = operator.expressions.mapIndexed { index, expr ->
-                val alias = expr.alias ?: if(expr.expression is Ast.Expression.Identifier) expr.expression.field.fieldName else "_col$index"
+                val alias = expr.alias ?: "_col$index"
                 Ast.NamedExpr(expr.expression, alias)
             }
 
@@ -181,8 +181,7 @@ private fun populateFields(operator: LogicalOperator, neededFields: List<Field> 
 
         is LogicalOperator.LateralView -> {
             val upstreamFieldsNeeded = (neededFields(operator.expression.expression) + neededFields).distinct()
-            val expr = operator.expression.expression
-            val alias = operator.expression.alias ?: if(expr is Ast.Expression.Identifier) expr.field.fieldName else null
+            val alias = operator.expression.alias
             semanticAssert(alias != null, "Lateral View must have alias")
             operator.expression = operator.expression.copy(alias = alias)
             populateFields(operator.sourceOperator, upstreamFieldsNeeded)
