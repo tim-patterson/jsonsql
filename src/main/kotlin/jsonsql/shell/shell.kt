@@ -94,6 +94,7 @@ object SqlHighlighter: Highlighter {
             SqlLexer.GROUP to keywordStyle1,
             SqlLexer.IS to keywordStyle1,
             SqlLexer.JSON to keywordStyle1,
+            SqlLexer.CSV to keywordStyle1,
             SqlLexer.LIMIT to keywordStyle1,
             SqlLexer.NOT to keywordStyle1,
             SqlLexer.NULL to keywordStyle1,

@@ -16,7 +16,7 @@ select_stmt
 
 named_expr
   : expr
-  | expr AS IDENTIFIER
+  | expr AS? IDENTIFIER
   ;
 
 group_by
