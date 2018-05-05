@@ -59,7 +59,12 @@ expr
   ;
 
 table
-  : JSON STRING_LITERAL
+  : table_type STRING_LITERAL
+  ;
+
+table_type
+  : JSON
+  | CSV
   ;
 
 subquery
@@ -92,6 +97,7 @@ function_call
 DESCRIBE: D E S C R I B E;
 SELECT: S E L E C T;
 JSON: J S O N;
+CSV: C S V;
 FROM: F R O M;
 LIMIT: L I M I T;
 WHERE: W H E R E;

@@ -7,13 +7,13 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.Reader
 
-class JsonReader(val path: String) {
+class JsonFormat(val path: String): FileFormat {
     private val files: Iterator<String> by lazy(::listDirs)
     private var reader: Reader? = null
     private var jsonReader: com.google.gson.stream.JsonReader? = null
     private val gson = GsonBuilder().setLenient().create()
 
-    fun next(): Map<String,*>? {
+    override fun next(): Map<String,*>? {
         while(true) {
             if (reader == null){
                 if (files.hasNext()) {
@@ -31,7 +31,7 @@ class JsonReader(val path: String) {
         }
     }
 
-    fun close() {
+    override fun close() {
         reader?.close()
     }
 

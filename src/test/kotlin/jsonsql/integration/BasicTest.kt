@@ -20,11 +20,27 @@ object BasicTest: Spek({
             """.trimIndent())
         }
 
+        it("describe csv") {
+            testQuery("describe csv 'test_data/simple.csv';", """
+                field1 | String
+                field2 | String
+                _col_2 | String
+            """.trimIndent())
+        }
+
         it("simple select") {
             testQuery("select rownum, arrayval, structval from json 'test_data/nested.json' limit 3;", """
                 1.0 | ["a1","a2","a3"] | {"inner_key":"a"}
                 2.0 | ["b1","b2","b3"] | {"inner_key":"b"}
                 3.0 | ["c1","c2","c3"] | {"inner_key":"c"}
+            """.trimIndent())
+        }
+
+        it("simple select csv") {
+            testQuery("select field1, field2 from csv 'test_data/simple.csv';", """
+                1 | quoted ,
+                2 | a
+                3 | foobar
             """.trimIndent())
         }
 

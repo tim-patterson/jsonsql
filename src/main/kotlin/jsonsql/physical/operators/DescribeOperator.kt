@@ -1,11 +1,14 @@
 package jsonsql.physical.operators
 
+import jsonsql.ast.Ast
 import jsonsql.ast.Field
-import jsonsql.fileformats.JsonReader
+import jsonsql.ast.TableType
+import jsonsql.fileformats.FileFormat
+import jsonsql.fileformats.JsonFormat
 import jsonsql.physical.PhysicalOperator
 
 
-class DescribeOperator(val path: String): PhysicalOperator() {
+class DescribeOperator(val table: Ast.Table): PhysicalOperator() {
     private val columns: Iterator<Pair<String,String>> by lazy(::scanTable)
 
     override fun columnAliases() = listOf("column_name", "column_type").map { Field(null, it) }
@@ -24,7 +27,7 @@ class DescribeOperator(val path: String): PhysicalOperator() {
     private fun scanTable(): Iterator<Pair<String,String>> {
         val cols = mutableMapOf<String, UsedTypes>()
 
-        val tableReader = JsonReader(path)
+        val tableReader = FileFormat.from(table)
 
         for (i in 0 until 2000) {
             val json = tableReader.next()
@@ -35,8 +38,12 @@ class DescribeOperator(val path: String): PhysicalOperator() {
             }
         }
         tableReader.close()
-
-        return cols.map{ it.key to it.value.toString() }.sortedBy{ it.first }.iterator()
+        val outRows = cols.map { it.key to it.value.toString() }
+        return if (table.type == TableType.JSON) {
+            outRows.sortedBy { it.first }.iterator()
+        } else {
+            outRows.iterator()
+        }
     }
 
     private fun populateUsedTypes(usedTypes: UsedTypes, value: Any?) {
