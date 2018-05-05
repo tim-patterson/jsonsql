@@ -33,25 +33,25 @@ object DivideFunction: TwoArgMathFunction() {
 
 
 object EqFunction: TwoArgScalarFunction() {
-    override fun execute(arg1: Any?, arg2: Any?) = compareValues(arg1, arg2) == 0
+    override fun execute(arg1: Any?, arg2: Any?) = compareValues(arg1, arg2)?.let { it == 0 }
 }
 
 object NEqFunction: TwoArgScalarFunction() {
-    override fun execute(arg1: Any?, arg2: Any?) = compareValues(arg1, arg2) != 0
+    override fun execute(arg1: Any?, arg2: Any?) = compareValues(arg1, arg2)?.let { it != 0 }
 }
 
 object GTFunction: TwoArgScalarFunction() {
-    override fun execute(arg1: Any?, arg2: Any?) = compareValues(arg1, arg2) > 0
+    override fun execute(arg1: Any?, arg2: Any?) = compareValues(arg1, arg2)?.let { it > 0 }
 }
 
 object GTEFunction: TwoArgScalarFunction() {
-    override fun execute(arg1: Any?, arg2: Any?) = compareValues(arg1, arg2) >= 0
+    override fun execute(arg1: Any?, arg2: Any?) = compareValues(arg1, arg2)?.let { it >= 0 }
 }
 
 object LTFunction: TwoArgScalarFunction() {
-    override fun execute(arg1: Any?, arg2: Any?) = compareValues(arg1, arg2) < 0
+    override fun execute(arg1: Any?, arg2: Any?) = compareValues(arg1, arg2)?.let { it < 0 }
 }
 
 object LTEFunction: TwoArgScalarFunction() {
-    override fun execute(arg1: Any?, arg2: Any?) = compareValues(arg1, arg2) <= 0
+    override fun execute(arg1: Any?, arg2: Any?) = compareValues(arg1, arg2)?.let { it <= 0 }
 }

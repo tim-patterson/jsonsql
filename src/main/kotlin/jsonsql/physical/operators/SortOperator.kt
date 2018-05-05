@@ -43,7 +43,7 @@ class SortOperator(val sortExpressions: List<Ast.OrderExpr>, val source: Physica
         buffer.sortWith(Comparator{ row1, row2 ->
             for (orderExpr in compiledSortBy) {
                 val expr = orderExpr.expression
-                val comparison = jsonsql.functions.compareValues(expr.evaluate(row1), expr.evaluate(row2))
+                val comparison = jsonsql.functions.compareValuesForSort(expr.evaluate(row1), expr.evaluate(row2))
                 if (comparison != 0) return@Comparator comparison * orderExpr.order
             }
             0
