@@ -4,7 +4,6 @@ import jsonsql.ast.Ast
 import jsonsql.ast.Field
 import jsonsql.ast.TableType
 import jsonsql.fileformats.FileFormat
-import jsonsql.fileformats.JsonFormat
 import jsonsql.physical.PhysicalOperator
 
 
@@ -27,7 +26,7 @@ class DescribeOperator(val table: Ast.Table): PhysicalOperator() {
     private fun scanTable(): Iterator<Pair<String,String>> {
         val cols = mutableMapOf<String, UsedTypes>()
 
-        val tableReader = FileFormat.from(table)
+        val tableReader = FileFormat.reader(table)
 
         for (i in 0 until 2000) {
             val json = tableReader.next()

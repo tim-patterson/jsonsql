@@ -2,6 +2,7 @@ package jsonsql.filesystems
 
 import java.io.File
 import java.io.InputStream
+import java.io.OutputStream
 import java.net.URI
 
 object LocalFileSystem: FileSystem {
@@ -9,8 +10,12 @@ object LocalFileSystem: FileSystem {
         return file(path).walk().filter { it.isFile }.map { it.absoluteFile.toURI().toString() }.toList()
     }
 
-    override fun open(path: String): InputStream {
+    override fun read(path: String): InputStream {
         return file(path).inputStream()
+    }
+
+    override fun write(path: String): OutputStream {
+        return file(path).outputStream()
     }
 
     private fun file(path: String): File {

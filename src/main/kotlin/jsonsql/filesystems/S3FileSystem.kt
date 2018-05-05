@@ -5,7 +5,9 @@ import com.amazonaws.regions.DefaultAwsRegionProviderChain
 import com.amazonaws.regions.Region
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
-import java.io.InputStream
+import com.amazonaws.services.s3.model.ObjectMetadata
+import com.amazonaws.services.s3.model.PutObjectRequest
+import java.io.*
 import java.net.URI
 
 
@@ -32,11 +34,22 @@ object S3FileSystem: FileSystem {
         return results
     }
 
-    override fun open(path: String): InputStream {
+    override fun read(path: String): InputStream {
         val s3Uri = URI.create(path)
         val authority = s3Uri.authority
         val key = s3Uri.path.trimStart('/')
         return s3.getObject(authority, key).objectContent
+    }
+
+    override fun write(path: String): OutputStream {
+        val s3Uri = URI.create(path)
+        val authority = s3Uri.authority
+        val key = s3Uri.path.trimStart('/')
+        val inS = PipedInputStream()
+        val outS = PipedOutputStream()
+        inS.connect(outS)
+        s3.putObject(authority, key, inS, ObjectMetadata())
+        return outS
     }
 
 }

@@ -1,20 +1,18 @@
 package jsonsql.filesystems
 
 import java.io.InputStream
+import java.io.OutputStream
 import java.net.URI
 
 interface FileSystem {
     fun listDir(path: String): List<String>
-    fun open(path: String): InputStream
+    fun read(path: String): InputStream
+    fun write(path: String): OutputStream
 
     companion object {
-        fun listDir(path: String): List<String> {
-            return fileSystem(path).listDir(path)
-        }
-
-        fun open(path: String): InputStream {
-            return fileSystem(path).open(path)
-        }
+        fun listDir(path: String) = fileSystem(path).listDir(path)
+        fun read(path: String) = fileSystem(path).read(path)
+        fun write(path: String) = fileSystem(path).write(path)
 
         private fun fileSystem(path: String): FileSystem {
             val scheme = URI.create(path).scheme
