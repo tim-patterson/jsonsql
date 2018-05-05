@@ -10,7 +10,9 @@ object HttpFileSystem: FileSystem {
     }
 
     override fun open(path: String): InputStream {
-        return URL(path).openStream()
+        val connection =  URL(path).openConnection()
+        connection.setRequestProperty("User-Agent", "jsonsql")
+        return connection.getInputStream()
     }
 
 }
