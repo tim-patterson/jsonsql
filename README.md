@@ -86,14 +86,14 @@ Just as we can query from s3 urls we can also query from http(s) urls.
 Try this one to see how it works
 ```sql
 select
-  d.title as title,
-  d.score as score,
-  d.permalink as link,
-  d.num_comments as num_comments
+  d.title,
+  d.score,
+  d.permalink,
+  d.num_comments
 from (
   select children.data as d
   from json 'https://www.reddit.com/r/all.json?limit=100'
-  lateral view data.children as children
+  lateral view data.children
 )
 order by num_comments desc;
 ```

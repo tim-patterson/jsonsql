@@ -103,7 +103,8 @@ private fun parseTableOrSubquery(source: SqlParser.Table_or_subqueryContext): As
 }
 
 private fun parseNamedExpression(node: SqlParser.Named_exprContext): Ast.NamedExpr {
-    val label = node.IDENTIFIER()?.text
+    // only 2 cases where node has an identifier, select foobar and select foobar.baz
+    val label = node.IDENTIFIER()?.text?.toLowerCase() ?: node.expr().IDENTIFIER()?.text?.toLowerCase()
     return Ast.NamedExpr(parseExpression(node.expr()), label)
 }
 

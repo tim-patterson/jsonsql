@@ -146,7 +146,7 @@ private fun populateFields(operator: LogicalOperator, neededFields: List<Field> 
         is LogicalOperator.Project -> {
             // Make sure all columns are named
             operator.expressions = operator.expressions.mapIndexed { index, expr ->
-                val alias = expr.alias ?: if(expr.expression is Ast.Expression.Identifier) expr.expression.field.fieldName else "_col$index"
+                val alias = expr.alias ?: "_col$index"
                 Ast.NamedExpr(expr.expression, alias)
             }
 
