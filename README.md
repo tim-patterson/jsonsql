@@ -80,6 +80,24 @@ Standard aws environment vars like `AWS_PROFILE`, `AWS_REGION` etc will be picke
 ![select output](https://github.com/tim-patterson/jsonsql/raw/master/docs/select-s3.png)
 
 
+### Querying from http sources
+Just as we can query from s3 urls we can also query from http(s) urls.
+
+Try this one to see how it works
+```sql
+select
+  d.title as title,
+  d.score as score,
+  d.permalink as link,
+  d.num_comments as num_comments
+from (
+  select children.data as d
+  from json 'https://www.reddit.com/r/all.json?limit=100'
+  lateral view data.children as children
+)
+order by num_comments desc;
+```
+
 ## Project Goals
 The main goals for this project are to be a lightweight standalone simple to use tool for adhoc querying of unstructured data using a
 syntax that's as close as possible to standard sql.

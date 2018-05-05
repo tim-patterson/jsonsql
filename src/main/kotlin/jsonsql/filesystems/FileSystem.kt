@@ -22,6 +22,8 @@ interface FileSystem {
                 null -> LocalFileSystem
                 "file" -> LocalFileSystem
                 "s3" -> S3FileSystem
+                "http" -> HttpFileSystem
+                "https" -> HttpFileSystem
                 else -> TODO("Unknown filesystem $scheme")
             }
         }
