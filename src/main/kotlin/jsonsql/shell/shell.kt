@@ -4,7 +4,7 @@ import jsonsql.SqlLexer
 import jsonsql.executor.execute
 import jsonsql.functions.StringInspector
 import jsonsql.physical.PhysicalOperator
-import org.antlr.v4.runtime.ANTLRInputStream
+import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.Token
 import org.jline.reader.*
 import org.jline.reader.impl.history.DefaultHistory
@@ -13,12 +13,23 @@ import org.jline.terminal.TerminalBuilder
 import org.jline.utils.AttributedString
 import org.jline.utils.AttributedStringBuilder
 import org.jline.utils.AttributedStyle
+import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
 
 fun main(args: Array<String>) {
     // Disable stupid s3 partial stream warnings
     System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.NoOpLog")
+
+
+    val historyFile = try {
+        val homedir = File(System.getProperty("user.home"))
+        val jsonSqlDir = File(homedir, ".jsonsql").apply { mkdir() }
+        File(jsonSqlDir, "history").path
+    } catch (e: Exception) {
+        System.err.println("Problem creating ~/.jsonsql dir")
+        ".jsonsqlhistory"
+    }
 
     val terminal = TerminalBuilder.builder().build()
     val history = DefaultHistory()
@@ -27,7 +38,7 @@ fun main(args: Array<String>) {
             .terminal(terminal)
             .history(history)
             .highlighter(SqlHighlighter)
-            .variable(LineReader.HISTORY_FILE, ".sqlhistory")
+            .variable(LineReader.HISTORY_FILE, historyFile)
             .build()
 
     // install shutdown hook to write out history
@@ -95,7 +106,7 @@ object SqlHighlighter: Highlighter {
     )
 
     override fun highlight(reader: LineReader, buffer: String): AttributedString {
-        val ins = ANTLRInputStream(buffer)
+        val ins = CharStreams.fromString(buffer)
         val lexer = SqlLexer(ins)
         lexer.removeErrorListeners()
 

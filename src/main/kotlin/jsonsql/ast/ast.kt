@@ -2,10 +2,7 @@ package jsonsql.ast
 
 import jsonsql.SqlLexer
 import jsonsql.SqlParser
-import org.antlr.v4.runtime.ANTLRInputStream
-import org.antlr.v4.runtime.BaseErrorListener
-import org.antlr.v4.runtime.CommonTokenStream
-import org.antlr.v4.runtime.RecognitionException
+import org.antlr.v4.runtime.*
 import org.antlr.v4.runtime.misc.ParseCancellationException
 import org.antlr.v4.runtime.tree.TerminalNode
 
@@ -44,7 +41,7 @@ data class Field(val tableAlias: String?, val fieldName: String) {
 
 
 fun parse(statement: String): Ast.Statement {
-    val ins = ANTLRInputStream(statement)
+    val ins = CharStreams.fromString(statement)
     val lexer = SqlLexer(ins)
     val tokens = CommonTokenStream(lexer)
     val parser = SqlParser(tokens)
