@@ -3,7 +3,7 @@
 
 [![Build Status](https://travis-ci.org/tim-patterson/jsonsql.svg?branch=master)](https://travis-ci.org/tim-patterson/jsonsql)
 
-A toy project that allows querying of newline delimited json using simple sql expressions
+A standalone app that allows querying of newline delimited json using simple sql expressions
 
 ## Getting Started
 All that's required to get started is to checkout the code and then compile and run. ie:
@@ -78,3 +78,12 @@ select rownum, arrayval[0] from json 'test_data/nested.json';
 By using an S3 url in our table JsonSQL can query data stored in s3.  It uses the aws java sdk to do this.
 Standard aws environment vars like `AWS_PROFILE`, `AWS_REGION` etc will be picked up and used.
 ![select output](https://github.com/tim-patterson/jsonsql/raw/master/docs/select-s3.png)
+
+
+## Project Goals
+The main goals for this project are to be a lightweight standalone simple to use tool for adhoc querying of unstructured data using a
+syntax that's as close as possible to standard sql.
+
+## Alternatives
+The major alternative that provides querying of json data using sql without having to create table definitions etc is
+[Apache Drill](https://drill.apache.org/)
