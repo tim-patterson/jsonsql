@@ -25,7 +25,7 @@ sealed class Ast {
         data class Identifier(val field: Field): Expression()
     }
 
-    data class Table(val type: String, val path: String): Ast()
+    data class Table(val type: TableType, val path: String): Ast()
 
     sealed class Source: Ast() {
         data class Table(val table: Ast.Table, val tableAlias: String?): Source()
@@ -38,6 +38,8 @@ sealed class Ast {
 data class Field(val tableAlias: String?, val fieldName: String) {
     override fun toString() = tableAlias?.let { "$it.$fieldName" } ?: fieldName
 }
+
+enum class TableType { CSV, JSON }
 
 
 fun parse(statement: String): Ast.Statement {
@@ -170,9 +172,9 @@ private fun parseNumericLiteral(node: TerminalNode): Ast.Expression.Constant {
 
 private fun parseTable(table: SqlParser.TableContext): Ast.Table {
     val tableType = if (table.table_type().CSV() != null) {
-        "csv"
+        TableType.CSV
     } else {
-        "json"
+        TableType.JSON
     }
     return Ast.Table(tableType, parseString(table.STRING_LITERAL()))
 }
