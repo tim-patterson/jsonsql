@@ -13,7 +13,6 @@ object JsonFormat: FileFormat {
 
     private class JacksonReader(val path: String): FileFormat.Reader {
         private val files: Iterator<String> by lazy(::listDirs)
-        private var inputStream: java.io.InputStream? = null
         private val objectReader = ObjectMapper().readerFor(Map::class.java)
         private var jsonParser: JsonParser = JsonFactory().createParser("")
 
@@ -36,7 +35,7 @@ object JsonFormat: FileFormat {
         }
 
         override fun close() {
-            inputStream?.close()
+            jsonParser.close()
         }
 
         private fun listDirs(): Iterator<String> {
@@ -45,8 +44,9 @@ object JsonFormat: FileFormat {
         }
 
         private fun nextFile(path: String) {
-            inputStream = NullStrippingInputStream(BufferedInputStream(FileSystem.read(path)))
-            jsonParser = JsonFactory().createParser(inputStream)
+            jsonParser.close()
+            val inputStream = NullStrippingInputStream(BufferedInputStream(FileSystem.read(path)))
+            jsonParser = JsonFactory().createParser(inputStream).configure(JsonParser.Feature.AUTO_CLOSE_SOURCE, true)
 
         }
     }

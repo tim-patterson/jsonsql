@@ -1,5 +1,7 @@
 package jsonsql.fileformats
 
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.MappingIterator
 import com.fasterxml.jackson.dataformat.csv.CsvMapper
 import com.fasterxml.jackson.dataformat.csv.CsvSchema
 import jsonsql.filesystems.FileSystem
@@ -11,11 +13,11 @@ object CsvFormat: FileFormat {
 
     private class JacksonReader(val path: String): FileFormat.Reader {
         private val files: Iterator<String> by lazy(::listDirs)
-        private var inputStream: java.io.InputStream? = null
         private val objectReader = CsvMapper().readerFor(Map::class.java).with(
                 CsvSchema.emptySchema().withHeader().withEscapeChar('\\').withNullValue("\\N")
         )
-        private var objectsIter: Iterator<Map<String,String>> = listOf<Map<String,String>>().iterator()
+        // Init with dummy csv so we don't have to handle special cases around null etc
+        private var objectsIter: MappingIterator<Map<String,String?>> = objectReader.readValues("dummy\n")
 
         override fun next(): Map<String, *>? {
             while (true) {
@@ -33,7 +35,7 @@ object CsvFormat: FileFormat {
         }
 
         override fun close() {
-            inputStream?.close()
+            objectsIter.close()
         }
 
         private fun listDirs(): Iterator<String> {
@@ -42,8 +44,9 @@ object CsvFormat: FileFormat {
         }
 
         private fun nextFile(path: String) {
-            inputStream = BufferedInputStream(FileSystem.read(path))
-            objectsIter = objectReader.readValues<Map<String,String>>(inputStream)
+            val inputStream = BufferedInputStream(FileSystem.read(path))
+            objectsIter = objectReader.readValues<Map<String,String?>>(inputStream)
+            objectsIter.parser.configure(JsonParser.Feature.AUTO_CLOSE_SOURCE, true)
         }
     }
 }
