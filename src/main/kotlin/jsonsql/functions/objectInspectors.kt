@@ -1,7 +1,6 @@
 package jsonsql.functions
 
-import com.google.gson.GsonBuilder
-
+import com.fasterxml.jackson.databind.ObjectMapper
 
 object NumberInspector {
     fun inspect(value: Any?): Double? {
@@ -34,13 +33,14 @@ object ArrayInspector {
 }
 
 object StringInspector {
-    private val gson = GsonBuilder().create()
+    private val objectWriter = ObjectMapper().writer()
     fun inspect(value: Any?): String? {
         return when(value) {
             is String -> value
             null -> null
-            is List<*> -> gson.toJson(value)
-            is Map<*,*> -> gson.toJson(value)
+            is List<*> -> objectWriter.writeValueAsString(value)
+            is Map<*,*> -> objectWriter.writeValueAsString(value)
+            is Number -> value.toDouble().toString()
             else -> value.toString()
         }
     }
