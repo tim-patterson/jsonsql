@@ -1,6 +1,5 @@
 package jsonsql.fileformats
 
-import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.databind.ObjectMapper
 import jsonsql.filesystems.FileSystem
 import java.io.BufferedInputStream
@@ -44,8 +43,7 @@ object JsonFormat: FileFormat {
 
         private fun nextFile(path: String) {
             inputStream = NullStrippingInputStream(BufferedInputStream(FileSystem.read(path)))
-            val parser = JsonFactory().createParser(inputStream)
-            objectsIter = objectReader.readValues<Any>(parser)
+            objectsIter = objectReader.readValues<Any>(inputStream)
         }
     }
 

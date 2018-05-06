@@ -24,7 +24,6 @@ object BasicTest: Spek({
             testQuery("describe csv 'test_data/simple.csv';", """
                 field1 | String
                 field2 | String
-                _col_2 | String
             """.trimIndent())
         }
 
@@ -39,8 +38,8 @@ object BasicTest: Spek({
         it("simple select csv") {
             testQuery("select field1, field2 from csv 'test_data/simple.csv';", """
                 1 | quoted ,
-                2 | a
-                3 | foobar
+                2 | null
+                escaped , | foobar
             """.trimIndent())
         }
 
