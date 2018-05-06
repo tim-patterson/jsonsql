@@ -114,6 +114,8 @@ private fun parseOrderByExpression(node: SqlParser.Order_by_exprContext): Ast.Or
 
 private fun parseExpression(node: SqlParser.ExprContext): Ast.Expression {
     return when {
+        node.function_call() != null -> parseFunctionCall(node.function_call())
+
         node.expr().size == 1 -> {
             val expr = listOf(parseExpression(node.expr().first()))
             when {
@@ -148,8 +150,11 @@ private fun parseExpression(node: SqlParser.ExprContext): Ast.Expression {
 
         node.STRING_LITERAL() != null -> parseStringLiteral(node.STRING_LITERAL() )
         node.NUMERIC_LITERAL() != null -> parseNumericLiteral(node.NUMERIC_LITERAL() )
+        node.TRUE() != null -> Ast.Expression.Constant(true)
+        node.FALSE() != null -> Ast.Expression.Constant(false)
+        node.NULL() != null -> Ast.Expression.Constant(null)
         node.IDENTIFIER() != null -> parseIdentifier(node.IDENTIFIER())
-        node.function_call() != null -> parseFunctionCall(node.function_call())
+
         else -> malformedAntlrCtx()
     }
 }

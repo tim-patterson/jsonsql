@@ -56,6 +56,9 @@ expr
   | expr IS NULL
   | expr IS NOT NULL
   | expr ( OP_AND | OP_OR ) expr
+  | TRUE
+  | FALSE
+  | NULL
   ;
 
 table
@@ -111,6 +114,8 @@ DESC: D E S C;
 IS: I S;
 NOT: N O T;
 NULL: N U L L;
+TRUE: T R U E;
+FALSE: F A L S E;
 LATERAL: L A T E R A L;
 VIEW: V I E W;
 JOIN: J O I N;
