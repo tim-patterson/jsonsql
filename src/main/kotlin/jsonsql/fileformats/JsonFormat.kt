@@ -1,5 +1,8 @@
 package jsonsql.fileformats
 
+import com.fasterxml.jackson.core.JsonFactory
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.ObjectMapper
 import jsonsql.filesystems.FileSystem
 import java.io.BufferedInputStream
@@ -11,17 +14,17 @@ object JsonFormat: FileFormat {
     private class JacksonReader(val path: String): FileFormat.Reader {
         private val files: Iterator<String> by lazy(::listDirs)
         private var inputStream: java.io.InputStream? = null
-        private val objectReader = ObjectMapper().readerFor(Any::class.java)
-        private var objectsIter: Iterator<Any> = listOf<Any>().iterator()
+        private val objectReader = ObjectMapper().readerFor(Map::class.java)
+        private var jsonParser: JsonParser = JsonFactory().createParser("")
 
         override fun next(): Map<String, *>? {
             while (true) {
-                if (objectsIter.hasNext()) {
-                    val row = objectsIter.next()
-                    return when(row) {
-                        is Map<*,*> -> row.mapKeys { (it.key as String).toLowerCase() }
-                        else -> TODO()
-                    }
+                // Skip over top level arrays etc
+                while(jsonParser.nextToken() in arrayOf(JsonToken.START_ARRAY, JsonToken.END_ARRAY)) {}
+
+                if (jsonParser.currentToken != null) {
+                    val row = objectReader.readValue<Map<String,Any?>>(jsonParser)
+                    return row.mapKeys { it.key.toLowerCase() }
                 } else {
                     if (files.hasNext()) {
                         nextFile(files.next())
@@ -43,7 +46,8 @@ object JsonFormat: FileFormat {
 
         private fun nextFile(path: String) {
             inputStream = NullStrippingInputStream(BufferedInputStream(FileSystem.read(path)))
-            objectsIter = objectReader.readValues<Any>(inputStream)
+            jsonParser = JsonFactory().createParser(inputStream)
+
         }
     }
 
