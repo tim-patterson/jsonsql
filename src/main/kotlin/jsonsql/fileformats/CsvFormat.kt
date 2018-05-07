@@ -1,14 +1,12 @@
 package jsonsql.fileformats
 
-import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.MappingIterator
-import com.fasterxml.jackson.dataformat.csv.CsvGenerator
 import com.fasterxml.jackson.dataformat.csv.CsvMapper
 import com.fasterxml.jackson.dataformat.csv.CsvSchema
 import jsonsql.filesystems.FileSystem
+import jsonsql.functions.StringInspector
 import java.io.BufferedInputStream
-import java.io.OutputStream
 
 object CsvFormat: FileFormat {
     override fun reader(path: String): FileFormat.Reader = Reader(path)
@@ -64,7 +62,7 @@ object CsvFormat: FileFormat {
         }
 
         override fun write(row: List<Any?>) {
-            objectWriter.write(row)
+            objectWriter.write(row.map { StringInspector.inspect(it) })
         }
 
         override fun close() = objectWriter.close()
