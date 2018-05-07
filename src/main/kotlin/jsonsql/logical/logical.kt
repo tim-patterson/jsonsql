@@ -67,6 +67,11 @@ sealed class LogicalOperator {
         override fun fields() = sourceOperator.fields()
         override fun children() = listOf(sourceOperator)
     }
+
+    data class Write(var tableDefinition: Ast.Table, var sourceOperator: LogicalOperator): LogicalOperator() {
+        override fun fields() = listOf(Field(null, "Result"))
+        override fun children() = listOf(sourceOperator)
+    }
 }
 
 
@@ -75,6 +80,7 @@ fun logicalOperatorTree(stmt: Ast.Statement) : LogicalOperator {
         is Ast.Statement.Describe -> LogicalOperator.Describe(stmt.tbl)
         is Ast.Statement.Select -> fromSelect(stmt)
         is Ast.Statement.Explain -> LogicalOperator.Explain(fromSelect(stmt.select))
+        is Ast.Statement.Insert -> LogicalOperator.Write(stmt.tbl, fromSelect(stmt.select))
     }
     populateFields(tree)
     validate(tree)

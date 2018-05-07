@@ -103,7 +103,9 @@ object SqlHighlighter: Highlighter {
             SqlLexer.WHERE to keywordStyle1,
             SqlLexer.SINGLE_LINE_COMMENT to commentStyle,
             SqlLexer.LATERAL to keywordStyle1,
-            SqlLexer.VIEW to keywordStyle1
+            SqlLexer.VIEW to keywordStyle1,
+            SqlLexer.INSERT to keywordStyle1,
+            SqlLexer.INTO to keywordStyle1
     )
 
     override fun highlight(reader: LineReader, buffer: String): AttributedString {

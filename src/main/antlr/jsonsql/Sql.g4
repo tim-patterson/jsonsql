@@ -8,6 +8,11 @@ stmt
   : select_stmt ';'
   | describe_stmt ';'
   | EXPLAIN select_stmt ';'
+  | insert_stmt ';'
+  ;
+
+insert_stmt
+  : INSERT INTO? table select_stmt
   ;
 
 select_stmt
@@ -120,6 +125,8 @@ LATERAL: L A T E R A L;
 VIEW: V I E W;
 JOIN: J O I N;
 ON: O N;
+INSERT: I N S E R T;
+INTO: I N T O;
 
 
 OP_PLUS: '+';

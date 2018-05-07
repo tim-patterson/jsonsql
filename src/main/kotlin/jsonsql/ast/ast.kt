@@ -11,6 +11,7 @@ sealed class Ast {
         data class Explain(val select: Select): Statement()
         data class Select(val expressions: List<NamedExpr>, val source: Source, val predicate: Expression?=null, val groupBy: List<Expression>?=null, val orderBy: List<OrderExpr>?=null, val limit: Int?=null) : Statement()
         data class Describe(val tbl: Table) : Statement()
+        data class Insert(val select: Select, val tbl: Table): Statement()
     }
 
     data class NamedExpr(val expression: Expression, val alias: String?): Ast()
@@ -65,6 +66,7 @@ private fun parseStmt(stmt: SqlParser.StmtContext): Ast.Statement {
     return when {
         stmt.describe_stmt() != null -> parseDescribeStmt(stmt.describe_stmt())
         stmt.EXPLAIN() != null -> Ast.Statement.Explain(parseSelectStmt(stmt.select_stmt()))
+        stmt.insert_stmt() != null -> Ast.Statement.Insert(parseSelectStmt(stmt.insert_stmt().select_stmt()), parseTable(stmt.insert_stmt().table()))
         stmt.select_stmt() != null -> parseSelectStmt(stmt.select_stmt())
         else -> malformedAntlrCtx()
     }

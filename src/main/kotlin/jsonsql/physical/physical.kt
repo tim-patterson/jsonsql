@@ -52,6 +52,7 @@ private fun physicalOperator(operator: LogicalOperator, pathOverride: String? = 
 
             GatherOperator(sources)
         }
+        is LogicalOperator.Write -> WriteOperator(operator.tableDefinition, physicalOperator(operator.sourceOperator))
     }
 }
 

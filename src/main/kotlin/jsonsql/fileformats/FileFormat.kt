@@ -7,11 +7,11 @@ import jsonsql.ast.TableType.*
 interface FileFormat {
 
     fun reader(path: String): Reader
-    fun writer(path: String): Writer
+    fun writer(path: String, fields: List<String>): Writer
 
     companion object {
         fun reader(table: Ast.Table) = forType(table.type).reader(table.path)
-        fun writer(table: Ast.Table) = forType(table.type).writer(table.path)
+        fun writer(table: Ast.Table, fields: List<String>) = forType(table.type).writer(table.path, fields)
 
         private fun forType(tableType: TableType) =
             when (tableType) {
@@ -26,7 +26,7 @@ interface FileFormat {
     }
 
     interface Writer {
-        fun write(row: Map<String,Any?>)
+        fun write(row: List<Any?>)
         fun close()
     }
 }
