@@ -15,7 +15,9 @@ object LocalFileSystem: FileSystem {
     }
 
     override fun write(path: String): OutputStream {
-        return file(path).outputStream()
+        val file = file(path)
+        file.parentFile.mkdirs()
+        return file.outputStream()
     }
 
     private fun file(path: String): File {
