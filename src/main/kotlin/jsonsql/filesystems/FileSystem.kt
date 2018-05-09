@@ -22,6 +22,7 @@ interface FileSystem {
                 "s3" -> S3FileSystem
                 "http" -> HttpFileSystem
                 "https" -> HttpFileSystem
+                "kafka" -> KafkaFileSystem
                 else -> TODO("Unknown filesystem $scheme")
             }
         }
