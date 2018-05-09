@@ -102,5 +102,16 @@ object BasicTest: Spek({
                 e
             """.trimIndent())
         }
+
+        it("escaped identifier") {
+            testQuery("select `+`.`pretty? weird` from (select rownum as `pretty? weird` from json 'test_data/nested.json') as `+`;", """
+                1.0
+                2.0
+                3.0
+                4.0
+                5.0
+            """.trimIndent())
+        }
+
     }
 })

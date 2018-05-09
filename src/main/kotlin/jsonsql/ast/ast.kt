@@ -97,8 +97,8 @@ private fun parseSource(source: SqlParser.SourceContext): Ast.Source {
 
 private fun parseTableOrSubquery(source: SqlParser.Table_or_subqueryContext): Ast.Source {
     return when {
-        source.table() != null -> Ast.Source.Table(parseTable(source.table()), source.IDENTIFIER()?.text?.toLowerCase())
-        source.subquery() != null -> Ast.Source.InlineView(parseSelectStmt(source.subquery().select_stmt()), source.IDENTIFIER()?.text?.toLowerCase())
+        source.table() != null -> Ast.Source.Table(parseTable(source.table()), source.IDENTIFIER()?.let { parseIdentifierStr(it) })
+        source.subquery() != null -> Ast.Source.InlineView(parseSelectStmt(source.subquery().select_stmt()), source.IDENTIFIER()?.let { parseIdentifierStr(it) })
         source.lateral_view() != null -> Ast.Source.LateralView(parseTableOrSubquery(source.table_or_subquery()), parseNamedExpression(source.lateral_view().named_expr()))
         else -> malformedAntlrCtx()
     }
@@ -106,7 +106,7 @@ private fun parseTableOrSubquery(source: SqlParser.Table_or_subqueryContext): As
 
 private fun parseNamedExpression(node: SqlParser.Named_exprContext): Ast.NamedExpr {
     // only 2 cases where node has an identifier, select foobar and select foobar.baz
-    val label = node.IDENTIFIER()?.text?.toLowerCase() ?: node.expr().IDENTIFIER()?.text?.toLowerCase()
+    val label = node.IDENTIFIER()?.let { parseIdentifierStr(it) } ?: node.expr().IDENTIFIER()?.let { parseIdentifierStr(it) }
     return Ast.NamedExpr(parseExpression(node.expr()), label)
 }
 
@@ -125,7 +125,7 @@ private fun parseExpression(node: SqlParser.ExprContext): Ast.Expression {
                     val functionName = if (node.NOT() == null) "is_null" else "is_not_null"
                     Ast.Expression.Function(functionName, expr)
                 }
-                node.OP_DOT() != null -> Ast.Expression.Function("idx", expr + Ast.Expression.Constant(node.IDENTIFIER().text.toLowerCase()))
+                node.OP_DOT() != null -> Ast.Expression.Function("idx", expr + Ast.Expression.Constant(parseIdentifierStr(node.IDENTIFIER())))
                 else -> expr.first() // ( expr ) case
             }
         }
@@ -162,7 +162,16 @@ private fun parseExpression(node: SqlParser.ExprContext): Ast.Expression {
 }
 
 private fun parseIdentifier(node: TerminalNode): Ast.Expression {
-    return Ast.Expression.Identifier(Field(null,node.text.toLowerCase()))
+    return Ast.Expression.Identifier(Field(null, parseIdentifierStr(node)))
+}
+
+private fun parseIdentifierStr(node: TerminalNode): String {
+    val raw = node.text.toLowerCase()
+    return if (raw.startsWith('`')) {
+        raw.substring(1, raw.length -1)
+    } else {
+        raw
+    }
 }
 
 private fun parseFunctionCall(node: SqlParser.Function_callContext): Ast.Expression.Function {
