@@ -84,8 +84,7 @@ fun logicalOperatorTree(stmt: Ast.Statement) : LogicalOperator {
     }
     populateFields(tree)
     validate(tree)
-    parallelize(tree)
-    return tree
+    return parallelize(tree)
 }
 
 private fun fromSource(node: Ast.Source): LogicalOperator {
