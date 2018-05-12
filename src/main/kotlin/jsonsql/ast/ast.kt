@@ -40,7 +40,7 @@ data class Field(val tableAlias: String?, val fieldName: String) {
     override fun toString() = tableAlias?.let { "$it.$fieldName" } ?: fieldName
 }
 
-enum class TableType { CSV, JSON }
+enum class TableType { CSV, JSON, DIR }
 
 
 fun parse(statement: String): Ast.Statement {
@@ -190,6 +190,8 @@ private fun parseNumericLiteral(node: TerminalNode): Ast.Expression.Constant {
 private fun parseTable(table: SqlParser.TableContext): Ast.Table {
     val tableType = if (table.table_type().CSV() != null) {
         TableType.CSV
+    } else if (table.table_type().DIR() != null) {
+        TableType.DIR
     } else {
         TableType.JSON
     }

@@ -1,5 +1,7 @@
 package jsonsql.logical
 
+import jsonsql.fileformats.FileFormat
+
 
 fun parallelize(logicalOperator: LogicalOperator): LogicalOperator {
     // If the whole tree it parallel safe we'll just gather at the root
@@ -22,7 +24,9 @@ private fun gatherWhereNeeded(logicalOperator: LogicalOperator): Boolean {
             }
             false
         }
-        is LogicalOperator.DataSource -> true
+        is LogicalOperator.DataSource -> {
+            FileFormat.forType(logicalOperator.tableDefinition.type).split()
+        }
 
         is LogicalOperator.Sort -> {
             if (gatherWhereNeeded(logicalOperator.sourceOperator)) {

@@ -73,6 +73,7 @@ table
 table_type
   : JSON
   | CSV
+  | DIR
   ;
 
 subquery
@@ -106,6 +107,7 @@ DESCRIBE: D E S C R I B E;
 SELECT: S E L E C T;
 JSON: J S O N;
 CSV: C S V;
+DIR: D I R;
 FROM: F R O M;
 LIMIT: L I M I T;
 WHERE: W H E R E;

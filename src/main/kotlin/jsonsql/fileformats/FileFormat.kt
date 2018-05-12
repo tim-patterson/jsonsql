@@ -15,10 +15,11 @@ interface FileFormat {
         fun reader(table: Ast.Table) = forType(table.type).reader(FileSystem.from(table.path), table.path)
         fun writer(table: Ast.Table, fields: List<String>) = forType(table.type).writer(FileSystem.from(table.path), table.path, fields)
 
-        private fun forType(tableType: TableType) =
+        fun forType(tableType: TableType) =
             when (tableType) {
                 CSV -> CsvFormat
                 JSON -> JsonFormat
+                DIR -> DirFormat
             }
     }
 
