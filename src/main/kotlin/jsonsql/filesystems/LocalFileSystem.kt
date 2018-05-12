@@ -4,7 +4,7 @@ import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.URI
-import java.util.*
+import java.time.Instant
 
 object LocalFileSystem: StreamFileSystem() {
     override fun listDir(path: String): List<Map<String, Any?>> {
@@ -15,7 +15,7 @@ object LocalFileSystem: StreamFileSystem() {
                     "name" to it.name,
                     "parent" to it.parent,
                     "extension" to it.extension,
-                    "last_modified" to Date(it.lastModified()),
+                    "last_modified" to Instant.ofEpochMilli(it.lastModified()),
                     "size" to it.length()
             )
         }.toList()
