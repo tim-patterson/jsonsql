@@ -44,9 +44,9 @@ object BasicTest: Spek({
         }
 
         it("select dir") {
-            testQuery("select extension, count(), sum(size) from dir 'test_data' group by extension;", """
+            testQuery("select extension, count(), sum(size) from dir 'test_data' where parent='test_data' group by extension;", """
                 csv | 1.0 | 53.0
-                json | 6.0 | 2135.0
+                json | 5.0 | 2015.0
             """.trimIndent())
         }
 
