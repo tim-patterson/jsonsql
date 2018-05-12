@@ -1,59 +1,73 @@
 package jsonsql.filesystems
 
-import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.TopicPartition
-import java.io.InputStream
-import java.io.OutputStream
 import java.net.URI
 
 
-object KafkaFileSystem: FileSystem {
-    override fun listDir(path: String): List<String> {
+object KafkaFileSystem: EventFileSystem() {
+    override fun listDir(path: String): List<Map<String, Any?>> {
         val kafkaUri = URI(path)
+        val topicName = kafkaUri.path.substringBeforeLast(":").trim('/')
         val partition = kafkaUri.path.substringAfterLast(":", "").toIntOrNull()
 
         return if (partition != null) {
-            listOf(path)
+            listOf(mapOf(
+                    "path" to path,
+                    "topic" to topicName,
+                    "partition" to partition
+            ))
         } else {
-            val topicName = kafkaUri.path.substringBeforeLast(":").trim('/')
+
            client(path).use { consumer ->
-                consumer.partitionsFor(topicName).map { "$path:${it.partition()}" }
+                consumer.partitionsFor(topicName).map {
+                    mapOf(
+                            "path" to "$path:${it.partition()}",
+                            "topic" to topicName,
+                            "partition" to it.partition()
+                    )
+                }
             }
         }
 
     }
 
-    override fun read(path: String): InputStream {
-        val kafkaUri = URI(path)
-        val topicName = kafkaUri.path.substringBefore(":").trim('/')
-        val partition = kafkaUri.path.substringAfterLast(":", "").toInt()
+    override fun read(path: String, terminating: Boolean): EventReader {
         val consumer = client(path)
-        val topicPartition = TopicPartition(topicName, partition)
-        consumer.assign(listOf(topicPartition))
-        consumer.seekToEnd(listOf(topicPartition))
-        val endOffset = consumer.position(topicPartition)
-        consumer.seekToBeginning(listOf(topicPartition))
-        var recordIter = listOf<ConsumerRecord<ByteArray,ByteArray>>().iterator()
+        val topicPartitions = listDir(path).map {
+            TopicPartition(it["topic"] as String, it["partition"] as Int)
+        }
+        consumer.assign(topicPartitions)
+        consumer.seekToEnd(topicPartitions)
+        val endOffsets = topicPartitions.zip(topicPartitions.map { consumer.position(it) })
+        consumer.seekToBeginning(topicPartitions)
 
-        return KafkaInputStream({
-            var ret: ByteArray? = null
-            while (true) {
-                if (recordIter.hasNext()) {
-                    ret = recordIter.next().value()
-                    break
-                }
-                if (consumer.position(topicPartition) < endOffset) {
-                    recordIter = consumer.poll(0).iterator()
-                } else {
-                    break
+        var records: Iterator<ByteArray> = listOf<ByteArray>().iterator()
+
+        return object: EventReader {
+            override fun next(): ByteArray? {
+                while (true) {
+                    if (records.hasNext()) {
+                        return records.next()
+                    }
+
+                    if (terminating && endOffsets.all { (topicPartition, offset) -> consumer.position(topicPartition) >= offset }) {
+                        return null
+                    }
+
+                    records = consumer.poll(1000).iterator().asSequence().map {
+                        it.value()
+                    }.iterator()
                 }
             }
-            ret
-        }, consumer::close)
+
+            override fun close() {
+                consumer.close()
+            }
+        }
     }
 
-    override fun write(path: String): OutputStream {
+    override fun write(path: String): EventWriter {
         TODO("not implemented")
     }
 
@@ -65,32 +79,5 @@ object KafkaFileSystem: FileSystem {
                 "key.deserializer" to "org.apache.kafka.common.serialization.ByteArrayDeserializer",
                 "value.deserializer" to "org.apache.kafka.common.serialization.ByteArrayDeserializer"
         ))
-    }
-}
-
-private class KafkaInputStream(val fetchMore: () -> ByteArray?, val closeCb: () -> Unit): InputStream() {
-    var buffer: ByteArray = byteArrayOf()
-    var offset = 0
-
-    override fun read(): Int {
-        while (true) {
-            if (offset >= buffer.size) {
-                if (!consumeMore()) return -1
-            }
-            return buffer[offset++].toInt()
-        }
-    }
-
-    /**
-     * Returns true if theres more
-     */
-    private fun consumeMore(): Boolean {
-        buffer = fetchMore() ?: return false
-        offset = 0
-        return true
-    }
-
-    override fun close() {
-        closeCb()
     }
 }

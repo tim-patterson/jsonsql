@@ -2,43 +2,61 @@ package jsonsql.filesystems
 
 import com.amazonaws.SdkClientException
 import com.amazonaws.regions.DefaultAwsRegionProviderChain
-import com.amazonaws.regions.Region
-import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.amazonaws.services.s3.model.ObjectMetadata
-import com.amazonaws.services.s3.model.PutObjectRequest
 import java.io.*
 import java.net.URI
 
 
-object S3FileSystem: FileSystem {
+object S3FileSystem: StreamFileSystem() {
 
     private val s3 = AmazonS3ClientBuilder.standard()
             .withForceGlobalBucketAccessEnabled(true)
             .withRegion(try { DefaultAwsRegionProviderChain().region } catch (e: SdkClientException) { "ap-southeast-2" })
             .build()
 
-    override fun listDir(path: String): List<String> {
+    override fun listDir(path: String): List<Map<String, Any?>> {
         val s3Uri = URI.create(path)
         val authority = s3Uri.authority
         val prefix = s3Uri.path.trimStart('/')
-        val results = mutableListOf<String>()
+        val results = mutableListOf<Map<String, Any?>>()
 
         var listing = s3.listObjects(authority, prefix)
-        results.addAll(listing.objectSummaries.filter { it.size > 0 }.map { "s3://$authority/${it.key}" })
+        results.addAll(listing.objectSummaries.map {
+            mapOf(
+                "path" to "s3://$authority/${it.key}",
+                "bucket" to it.bucketName,
+                "key" to it.key,
+                "owner" to it.owner.displayName,
+                "storage_class" to it.storageClass,
+                "last_modified" to it.lastModified,
+                "size" to it.size
+            )
+        })
 
         while(listing.isTruncated) {
             listing = s3.listNextBatchOfObjects(listing)
-            results.addAll(listing.objectSummaries.filter { it.size > 0 }.map { "s3://$authority/${it.key}" })
+            results.addAll(listing.objectSummaries.map {
+                mapOf(
+                        "path" to "s3://$authority/${it.key}",
+                        "bucket" to it.bucketName,
+                        "key" to it.key,
+                        "owner" to it.owner.displayName,
+                        "storage_class" to it.storageClass,
+                        "last_modified" to it.lastModified,
+                        "size" to it.size
+                )
+            })
         }
         return results
     }
 
-    override fun read(path: String): InputStream {
-        val s3Uri = URI.create(path)
-        val authority = s3Uri.authority
-        val key = s3Uri.path.trimStart('/')
-        return s3.getObject(authority, key).objectContent
+
+    override fun read(path: String): Iterator<InputStream> {
+        return listDir(path).filter { it["size"] != 0 }.asSequence().map {
+            s3.getObject(it["bucket"] as String, it["key"] as String).objectContent
+        }.iterator()
+
     }
 
     override fun write(path: String): OutputStream {
