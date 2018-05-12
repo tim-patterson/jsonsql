@@ -3,7 +3,7 @@ package jsonsql.physical.operators
 import jsonsql.physical.PhysicalOperator
 import java.util.concurrent.*
 
-class GatherOperator(val sources: List<PhysicalOperator>): PhysicalOperator() {
+class GatherOperator(val sources: List<PhysicalOperator>, val allAtOnce: Boolean): PhysicalOperator() {
     private val queue: BlockingQueue<List<Any?>> by lazy (::runChildren)
     private lateinit var futures: List<Future<Unit>>
     private lateinit var executorPool: ExecutorService
@@ -40,7 +40,7 @@ class GatherOperator(val sources: List<PhysicalOperator>): PhysicalOperator() {
 
     private fun runChildren(): BlockingQueue<List<Any?>> {
         val queue = ArrayBlockingQueue<List<Any?>>(1024)
-        executorPool = Executors.newWorkStealingPool()
+        executorPool = if (allAtOnce) Executors.newFixedThreadPool(sources.size) else Executors.newWorkStealingPool()
         val tasks = sources.map { source ->
             Callable<Unit> {
                 while (!Thread.interrupted()) {

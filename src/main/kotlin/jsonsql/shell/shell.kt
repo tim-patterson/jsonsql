@@ -17,6 +17,7 @@ import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
 
+
 fun main(args: Array<String>) {
     // Disable stupid s3 partial stream warnings
     System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.NoOpLog")
@@ -44,25 +45,32 @@ fun main(args: Array<String>) {
     // install shutdown hook to write out history
     Runtime.getRuntime().addShutdownHook(Thread({ history.save() }))
 
-    var commandBuffer = mutableListOf<String>()
+    val commandBuffer = mutableListOf<String>()
 
     try {
+        val currThread = Thread.currentThread()
+        terminal.handle(Terminal.Signal.INT, { currThread.interrupt() })
         terminal.writer().println(AttributedString("JsonSQL", AttributedStyle.BOLD).toAnsi(terminal))
         while (true) {
             val line = lineReader.readLine("> ")
             commandBuffer.add(line)
 
             if (line.contains(";")) {
-                var query = commandBuffer.joinToString("\n")
+                val query = commandBuffer.joinToString("\n")
                 commandBuffer.clear()
+                var root: PhysicalOperator? = null
                 try {
-                    val operator = execute(query)
-                    renderTable(terminal, operator)
-                    operator.close()
+                    val operatorTree = execute(query)
+                    root = operatorTree.root
+                    renderTable(terminal, root, operatorTree.streaming)
+                } catch (e: InterruptedException) {
+                    terminal.writer().println(AttributedString("Query Cancelled", AttributedStyle.DEFAULT.foreground(AttributedStyle.RED)).toAnsi(terminal))
                 } catch (e: Exception) {
                     val stringWriter = StringWriter()
                     e.printStackTrace(PrintWriter(stringWriter))
                     terminal.writer().println(AttributedString(stringWriter.toString(), AttributedStyle.DEFAULT.foreground(AttributedStyle.RED)).toAnsi(terminal))
+                } finally {
+                    root?.close()
                 }
             }
         }
@@ -133,7 +141,7 @@ private val tableStyle = AttributedStyle.DEFAULT.foreground(AttributedStyle.GREE
 private val headerStyle = AttributedStyle.BOLD.foreground(AttributedStyle.CYAN)
 
 
-fun renderTable(terminal: Terminal, operator: PhysicalOperator) {
+fun renderTable(terminal: Terminal, operator: PhysicalOperator, streaming: Boolean) {
     val startTime = System.currentTimeMillis()
     // Get the first 1000 rows to get a good guess on column width etc
     val rowBuffer = mutableListOf<List<String>>()
@@ -141,7 +149,9 @@ fun renderTable(terminal: Terminal, operator: PhysicalOperator) {
 
     var rowCount = 0
 
-    for (i in 0 until 1000) {
+    val bufferSize = if(streaming) 1 else 1000
+
+    for (i in 0 until bufferSize) {
         val row = operator.next()
         row ?: break
         val stringRow = stringifyRow(row)
@@ -151,7 +161,7 @@ fun renderTable(terminal: Terminal, operator: PhysicalOperator) {
 
     // render header.
     val horizontalLine = AttributedString(
-            maxWidths.map { "-".repeat(it) }.joinToString("+", prefix = "+", postfix = "+"),
+            maxWidths.joinToString("+", prefix = "+", postfix = "+") { "-".repeat(it) },
             tableStyle
     ).toAnsi(terminal)
 
@@ -160,6 +170,7 @@ fun renderTable(terminal: Terminal, operator: PhysicalOperator) {
     terminal.writer().println(horizontalLine)
     rowBuffer.forEach {
         terminal.writer().println(renderLine(it, maxWidths).toAnsi(terminal))
+        terminal.flush()
         rowCount++
     }
 
@@ -167,6 +178,7 @@ fun renderTable(terminal: Terminal, operator: PhysicalOperator) {
         val row = operator.next()
         row ?: break
         terminal.writer().println(renderLine(stringifyRow(row), maxWidths).toAnsi(terminal))
+        terminal.flush()
         rowCount++
     }
     terminal.writer().println(horizontalLine)

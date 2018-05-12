@@ -20,7 +20,9 @@ object AstSpec: Spek({
             assertThat(parse("select 1 from json 'dummy';"), equalTo(
                     Select(
                             listOf(NamedExpr(Constant(1.0), null)),
-                            Source.Table(Table(TableType.JSON,"dummy"), null)
+                            Source.Table(Table(TableType.JSON,"dummy"), null),
+                            streaming = false,
+                            linger = 0.0
                     ) as Statement
             ))
         }

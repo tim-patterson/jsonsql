@@ -4,6 +4,7 @@ import jsonsql.ast.Ast
 import jsonsql.ast.Field
 import jsonsql.filesystems.FileSystem
 import jsonsql.logical.LogicalOperator
+import jsonsql.logical.LogicalTree
 import jsonsql.physical.operators.*
 
 abstract class PhysicalOperator: AutoCloseable {
@@ -14,47 +15,54 @@ abstract class PhysicalOperator: AutoCloseable {
     open fun children(): List<PhysicalOperator> = listOf()
 }
 
-fun physicalOperatorTree(operatorTree: LogicalOperator): PhysicalOperator {
-    val tree = physicalOperator(operatorTree)
-    tree.compile()
-    return tree
+fun physicalOperatorTree(operatorTree: LogicalTree): PhysicalTree {
+    val root = physicalOperator(operatorTree.root, operatorTree.streaming)
+    root.compile()
+    return PhysicalTree(root, operatorTree.streaming && root !is ExplainOperator)
 }
 
-private fun physicalOperator(operator: LogicalOperator, pathOverride: String? = null) : PhysicalOperator {
+private fun physicalOperator(operator: LogicalOperator, streaming: Boolean, pathOverride: String? = null) : PhysicalOperator {
     return when(operator) {
-        is LogicalOperator.Limit -> LimitOperator(operator.limit, physicalOperator(operator.sourceOperator, pathOverride))
-        is LogicalOperator.Sort -> SortOperator(operator.sortExpressions, physicalOperator(operator.sourceOperator, pathOverride))
+        is LogicalOperator.Limit -> LimitOperator(operator.limit, physicalOperator(operator.sourceOperator, streaming, pathOverride))
+        is LogicalOperator.Sort -> SortOperator(operator.sortExpressions, physicalOperator(operator.sourceOperator, streaming, pathOverride))
         is LogicalOperator.Describe -> DescribeOperator(operator.tableDefinition)
         is LogicalOperator.DataSource -> TableScanOperator(pathOverride?.let { operator.tableDefinition.copy(path = it) } ?: operator.tableDefinition, operator.fields().map { it.fieldName }, operator.alias)
-        is LogicalOperator.Explain -> ExplainOperator(physicalOperator(operator.sourceOperator, pathOverride))
-        is LogicalOperator.Project -> ProjectOperator(operator.expressions, physicalOperator(operator.sourceOperator, pathOverride), operator.alias)
-        is LogicalOperator.Filter -> FilterOperator(operator.predicate, physicalOperator(operator.sourceOperator, pathOverride))
-        is LogicalOperator.LateralView -> LateralViewOperator(operator.expression, physicalOperator(operator.sourceOperator, pathOverride))
-        is LogicalOperator.Join -> JoinOperator(operator.onClause, physicalOperator(operator.sourceOperator1), physicalOperator(operator.sourceOperator2))
+        is LogicalOperator.Explain -> ExplainOperator(physicalOperator(operator.sourceOperator, streaming, pathOverride))
+        is LogicalOperator.Project -> ProjectOperator(operator.expressions, physicalOperator(operator.sourceOperator, streaming, pathOverride), operator.alias)
+        is LogicalOperator.Filter -> FilterOperator(operator.predicate, physicalOperator(operator.sourceOperator, streaming, pathOverride))
+        is LogicalOperator.LateralView -> LateralViewOperator(operator.expression, physicalOperator(operator.sourceOperator, streaming, pathOverride))
+        is LogicalOperator.Join -> JoinOperator(operator.onClause, physicalOperator(operator.sourceOperator1, streaming), physicalOperator(operator.sourceOperator2, streaming))
         is LogicalOperator.GroupBy -> {
-            var sourceOperator = physicalOperator(operator.sourceOperator, pathOverride)
-            // The logical group by is performed by a sort by the group by keys followed by the actual group by operator
-            // Unless its an empty group by, then the sort isn't needed
-            if (operator.groupByExpressions.isNotEmpty()) {
-                val sortExpr = operator.groupByExpressions.map { Ast.OrderExpr(it, true) }
-                sourceOperator = SortOperator(sortExpr, sourceOperator)
+            var sourceOperator = physicalOperator(operator.sourceOperator, streaming, pathOverride)
+            if (streaming) {
+                StreamingGroupByOperator(operator.expressions, operator.groupByExpressions, sourceOperator, operator.linger, operator.alias)
+            } else {
+
+                // The logical group by is performed by a sort by the group by keys followed by the actual group by operator
+                // Unless its an empty group by, then the sort isn't needed
+                if (operator.groupByExpressions.isNotEmpty()) {
+                    val sortExpr = operator.groupByExpressions.map { Ast.OrderExpr(it, true) }
+                    sourceOperator = SortOperator(sortExpr, sourceOperator)
+                }
+                GroupByOperator(operator.expressions, operator.groupByExpressions, sourceOperator, operator.alias)
             }
-            GroupByOperator(operator.expressions, operator.groupByExpressions, sourceOperator, operator.alias)
         }
         is LogicalOperator.Gather -> {
             val tableSource = getTableSource(operator.sourceOperator)
             val files = FileSystem.listDir(tableSource.path)
             val sources = if (files.isEmpty()) {
-                listOf(physicalOperator(operator.sourceOperator))
+                listOf(physicalOperator(operator.sourceOperator, streaming))
             } else {
-                files.map { physicalOperator(operator.sourceOperator, it["path"] as String) }
+                files.map { physicalOperator(operator.sourceOperator, streaming, it["path"] as String) }
             }
 
-            GatherOperator(sources)
+            GatherOperator(sources, streaming)
         }
-        is LogicalOperator.Write -> WriteOperator(operator.tableDefinition, physicalOperator(operator.sourceOperator))
+        is LogicalOperator.Write -> WriteOperator(operator.tableDefinition, physicalOperator(operator.sourceOperator, streaming))
     }
 }
+
+data class PhysicalTree(val root: PhysicalOperator, val streaming: Boolean)
 
 private fun getTableSource(operator: LogicalOperator): Ast.Table {
     return when (operator) {

@@ -53,7 +53,7 @@ sealed class LogicalOperator {
         override fun children() = listOf(sourceOperator)
     }
 
-    data class GroupBy(var expressions: List<Ast.NamedExpr>, var groupByExpressions: List<Ast.Expression>, var sourceOperator: LogicalOperator): LogicalOperator() {
+    data class GroupBy(var expressions: List<Ast.NamedExpr>, var groupByExpressions: List<Ast.Expression>, val linger: Double, var sourceOperator: LogicalOperator): LogicalOperator() {
         override fun fields() = expressions.map { Field(alias, it.alias!!) }
         override fun children() = listOf(sourceOperator)
     }
@@ -74,17 +74,19 @@ sealed class LogicalOperator {
     }
 }
 
+data class LogicalTree(val root: LogicalOperator, val streaming: Boolean)
 
-fun logicalOperatorTree(stmt: Ast.Statement) : LogicalOperator {
+
+fun logicalOperatorTree(stmt: Ast.Statement) : LogicalTree {
     val tree = when(stmt) {
-        is Ast.Statement.Describe -> LogicalOperator.Describe(stmt.tbl)
-        is Ast.Statement.Select -> fromSelect(stmt)
-        is Ast.Statement.Explain -> LogicalOperator.Explain(fromSelect(stmt.select))
-        is Ast.Statement.Insert -> LogicalOperator.Write(stmt.tbl, fromSelect(stmt.select))
+        is Ast.Statement.Describe -> LogicalTree(LogicalOperator.Describe(stmt.tbl), false)
+        is Ast.Statement.Select -> LogicalTree(fromSelect(stmt), stmt.streaming)
+        is Ast.Statement.Explain -> LogicalTree(LogicalOperator.Explain(fromSelect(stmt.select)), stmt.select.streaming)
+        is Ast.Statement.Insert -> LogicalTree(LogicalOperator.Write(stmt.tbl, fromSelect(stmt.select)), stmt.select.streaming)
     }
-    populateFields(tree)
-    validate(tree)
-    return parallelize(tree)
+    populateFields(tree.root)
+    validate(tree.root)
+    return tree.copy(root = parallelize(tree.root))
 }
 
 private fun fromSource(node: Ast.Source): LogicalOperator {
@@ -124,7 +126,7 @@ private fun fromSelect(node: Ast.Statement.Select): LogicalOperator {
     if (node.groupBy != null || node.expressions.map { checkForAggregate(it.expression) }.any { it } ) {
         val groupByKeys = node.groupBy?.let { normalizeIdentifiers(it, aliases) } ?: listOf()
 
-        operator = LogicalOperator.GroupBy(normalizeIdentifiersForNamed(node.expressions, aliases), groupByKeys, operator)
+        operator = LogicalOperator.GroupBy(normalizeIdentifiersForNamed(node.expressions, aliases), groupByKeys, node.linger, operator)
     } else {
         operator = LogicalOperator.Project(normalizeIdentifiersForNamed(node.expressions, aliases), operator)
     }

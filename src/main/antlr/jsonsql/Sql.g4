@@ -16,7 +16,7 @@ insert_stmt
   ;
 
 select_stmt
-  : SELECT named_expr ( ',' named_expr )* FROM source predicate? group_by? order_by? (LIMIT NUMERIC_LITERAL)?
+  : STREAMING? SELECT named_expr ( ',' named_expr )* FROM source predicate? group_by? order_by? (LIMIT NUMERIC_LITERAL)?
   ;
 
 named_expr
@@ -25,7 +25,11 @@ named_expr
   ;
 
 group_by
-  : GROUP BY expr ( ',' expr )*
+  : GROUP BY expr ( ',' expr )* linger_expr?
+  ;
+
+linger_expr
+  : LINGER NUMERIC_LITERAL
   ;
 
 order_by_expr
@@ -129,6 +133,8 @@ JOIN: J O I N;
 ON: O N;
 INSERT: I N S E R T;
 INTO: I N T O;
+STREAMING: S T R E A M I N G;
+LINGER: L I N G E R;
 
 
 OP_PLUS: '+';

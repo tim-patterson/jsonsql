@@ -21,6 +21,7 @@ sealed class FileSystem {
                 "http" -> HttpFileSystem
                 "https" -> HttpFileSystem
                 "kafka" -> KafkaFileSystem
+                "dummy" -> DummyFileSystem
                 else -> TODO("Unknown filesystem $scheme")
             }
         }
