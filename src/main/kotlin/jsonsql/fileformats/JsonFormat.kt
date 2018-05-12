@@ -16,7 +16,7 @@ object JsonFormat: FileFormat {
     override fun reader(fs: FileSystem, path: String): FileFormat.Reader {
         return when(fs) {
             is StreamFileSystem -> StreamReader(fs, path)
-            is EventFileSystem -> TODO()
+            is EventFileSystem -> EventReader(fs, path)
         }
     }
 
@@ -60,6 +60,19 @@ object JsonFormat: FileFormat {
             jsonParser = JsonFactory().createParser(inputStream).configure(JsonParser.Feature.AUTO_CLOSE_SOURCE, true)
 
         }
+    }
+
+    private class EventReader(val fs: EventFileSystem, val path: String): FileFormat.Reader {
+        private val eventReader: EventFileSystem.EventReader by lazy { fs.read(path) }
+        private val jsonReader = ObjectMapper().readerFor(Map::class.java)
+
+        override fun next(): Map<String, *>? {
+            val bytes = eventReader.next()
+            bytes ?: return null
+            return jsonReader.readValue<Map<String, Any?>>(bytes).mapKeys { it.key.toLowerCase() }
+        }
+
+        override fun close() = eventReader.close()
     }
 
     private class Writer(val fs: StreamFileSystem, val path: String, val fields: List<String>): FileFormat.Writer {
