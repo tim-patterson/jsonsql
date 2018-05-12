@@ -43,6 +43,13 @@ object BasicTest: Spek({
             """.trimIndent())
         }
 
+        it("select dir") {
+            testQuery("select extension, count(), sum(size) from dir 'test_data' group by extension;", """
+                csv | 1.0 | 53.0
+                json | 6.0 | 2135.0
+            """.trimIndent())
+        }
+
         it("select __all__") {
             testQuery("select __all__ from json 'test_data/nested.json' limit 3;", """
                 {"rownum":1,"arrayval":["a1","a2","a3"],"structval":{"inner_key":"a"}}
