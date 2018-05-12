@@ -13,10 +13,10 @@ import java.io.InputStream
 import java.io.OutputStream
 
 object JsonFormat: FileFormat {
-    override fun reader(fs: FileSystem, path: String): FileFormat.Reader {
+    override fun reader(fs: FileSystem, path: String, terminating: Boolean): FileFormat.Reader {
         return when(fs) {
             is StreamFileSystem -> StreamReader(fs, path)
-            is EventFileSystem -> EventReader(fs, path)
+            is EventFileSystem -> EventReader(fs, path, terminating)
         }
     }
 
@@ -62,8 +62,8 @@ object JsonFormat: FileFormat {
         }
     }
 
-    private class EventReader(val fs: EventFileSystem, val path: String): FileFormat.Reader {
-        private val eventReader: EventFileSystem.EventReader by lazy { fs.read(path) }
+    private class EventReader(val fs: EventFileSystem, val path: String, terminating: Boolean): FileFormat.Reader {
+        private val eventReader: EventFileSystem.EventReader by lazy { fs.read(path, terminating) }
         private val jsonReader = ObjectMapper().readerFor(Map::class.java)
 
         override fun next(): Map<String, *>? {

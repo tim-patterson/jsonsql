@@ -26,7 +26,7 @@ private fun physicalOperator(operator: LogicalOperator, streaming: Boolean, path
         is LogicalOperator.Limit -> LimitOperator(operator.limit, physicalOperator(operator.sourceOperator, streaming, pathOverride))
         is LogicalOperator.Sort -> SortOperator(operator.sortExpressions, physicalOperator(operator.sourceOperator, streaming, pathOverride))
         is LogicalOperator.Describe -> DescribeOperator(operator.tableDefinition)
-        is LogicalOperator.DataSource -> TableScanOperator(pathOverride?.let { operator.tableDefinition.copy(path = it) } ?: operator.tableDefinition, operator.fields().map { it.fieldName }, operator.alias)
+        is LogicalOperator.DataSource -> TableScanOperator(pathOverride?.let { operator.tableDefinition.copy(path = it) } ?: operator.tableDefinition, operator.fields().map { it.fieldName }, streaming, operator.alias)
         is LogicalOperator.Explain -> ExplainOperator(physicalOperator(operator.sourceOperator, streaming, pathOverride))
         is LogicalOperator.Project -> ProjectOperator(operator.expressions, physicalOperator(operator.sourceOperator, streaming, pathOverride), operator.alias)
         is LogicalOperator.Filter -> FilterOperator(operator.predicate, physicalOperator(operator.sourceOperator, streaming, pathOverride))

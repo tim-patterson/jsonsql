@@ -12,7 +12,7 @@ import java.io.BufferedInputStream
 import java.io.InputStream
 
 object CsvFormat: FileFormat {
-    override fun reader(fs: FileSystem, path: String): FileFormat.Reader {
+    override fun reader(fs: FileSystem, path: String, terminating: Boolean): FileFormat.Reader {
         return when(fs) {
             is StreamFileSystem -> StreamReader(fs, path)
             is EventFileSystem -> TODO()

@@ -26,7 +26,7 @@ class DescribeOperator(val table: Ast.Table): PhysicalOperator() {
     private fun scanTable(): Iterator<Pair<String,String>> {
         val cols = mutableMapOf<String, UsedTypes>()
 
-        val tableReader = FileFormat.reader(table)
+        val tableReader = FileFormat.reader(table, true)
 
         for (i in 0 until 2000) {
             val json = tableReader.next()

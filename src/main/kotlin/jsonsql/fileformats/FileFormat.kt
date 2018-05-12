@@ -7,12 +7,12 @@ import jsonsql.filesystems.FileSystem
 
 interface FileFormat {
 
-    fun reader(fs: FileSystem, path: String): Reader
+    fun reader(fs: FileSystem, path: String, terminating: Boolean): Reader
     fun writer(fs: FileSystem, path: String, fields: List<String>): Writer
     fun split(): Boolean = true
 
     companion object {
-        fun reader(table: Ast.Table) = forType(table.type).reader(FileSystem.from(table.path), table.path)
+        fun reader(table: Ast.Table, terminating: Boolean) = forType(table.type).reader(FileSystem.from(table.path), table.path, terminating)
         fun writer(table: Ast.Table, fields: List<String>) = forType(table.type).writer(FileSystem.from(table.path), table.path, fields)
 
         fun forType(tableType: TableType) =
