@@ -5,16 +5,30 @@ import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.ObjectMapper
+import jsonsql.filesystems.EventFileSystem
 import jsonsql.filesystems.FileSystem
+import jsonsql.filesystems.StreamFileSystem
 import java.io.BufferedInputStream
+import java.io.InputStream
 import java.io.OutputStream
 
 object JsonFormat: FileFormat {
-    override fun reader(path: String): FileFormat.Reader = Reader(path)
-    override fun writer(path: String, fields: List<String>): FileFormat.Writer = Writer(path, fields)
+    override fun reader(fs: FileSystem, path: String): FileFormat.Reader {
+        return when(fs) {
+            is StreamFileSystem -> StreamReader(fs, path)
+            is EventFileSystem -> EventReader(fs, path)
+        }
+    }
 
-    private class Reader(val path: String): FileFormat.Reader {
-        private val files: Iterator<String> by lazy(::listDirs)
+    override fun writer(fs: FileSystem, path: String, fields: List<String>): FileFormat.Writer {
+        return when(fs) {
+            is StreamFileSystem -> Writer(fs, path, fields)
+            is EventFileSystem -> TODO()
+        }
+    }
+
+    private class StreamReader(val fs: StreamFileSystem, val path: String): FileFormat.Reader {
+        private val files: Iterator<InputStream> by lazy { fs.read(path) }
         private val objectReader = ObjectMapper().readerFor(Map::class.java)
         private var jsonParser: JsonParser = JsonFactory().createParser("")
 
@@ -40,21 +54,29 @@ object JsonFormat: FileFormat {
             jsonParser.close()
         }
 
-        private fun listDirs(): Iterator<String> {
-            // Sort so the describe operator has more of a chance of getting the latest data
-            return FileSystem.listDir(path).sortedDescending().iterator()
-        }
-
-        private fun nextFile(path: String) {
+        private fun nextFile(rawInputStream: InputStream) {
             jsonParser.close()
-            val inputStream = NullStrippingInputStream(BufferedInputStream(FileSystem.read(path)))
+            val inputStream = NullStrippingInputStream(BufferedInputStream(rawInputStream))
             jsonParser = JsonFactory().createParser(inputStream).configure(JsonParser.Feature.AUTO_CLOSE_SOURCE, true)
 
         }
     }
 
-    private class Writer(val path: String, val fields: List<String>): FileFormat.Writer {
-        private val out: OutputStream by lazy { FileSystem.write(path) }
+    private class EventReader(val fs: EventFileSystem, val path: String): FileFormat.Reader {
+        private val eventReader: EventFileSystem.EventReader by lazy { fs.read(path) }
+        private val jsonReader = ObjectMapper().readerFor(Map::class.java)
+
+        override fun next(): Map<String, *>? {
+            val bytes = eventReader.next()
+            bytes ?: return null
+            return jsonReader.readValue<Map<String, Any?>>(bytes).mapKeys { it.key.toLowerCase() }
+        }
+
+        override fun close() = eventReader.close()
+    }
+
+    private class Writer(val fs: StreamFileSystem, val path: String, val fields: List<String>): FileFormat.Writer {
+        private val out: OutputStream by lazy { fs.write(path) }
         private val objectWriter = ObjectMapper().disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET).writer()
 
         override fun write(row: List<Any?>) {

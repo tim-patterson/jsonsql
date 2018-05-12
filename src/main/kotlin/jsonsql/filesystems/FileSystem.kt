@@ -4,17 +4,15 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.net.URI
 
-interface FileSystem {
-    fun listDir(path: String): List<String>
-    fun read(path: String): InputStream
-    fun write(path: String): OutputStream
+sealed class FileSystem {
+    // String to list of file attributes
+    // each must contain a "path" attribute
+    abstract fun listDir(path: String): List<Map<String, Any?>>
 
     companion object {
-        fun listDir(path: String) = fileSystem(path).listDir(path)
-        fun read(path: String) = fileSystem(path).read(path)
-        fun write(path: String) = fileSystem(path).write(path)
+        fun listDir(path: String) = from(path).listDir(path)
 
-        private fun fileSystem(path: String): FileSystem {
+        fun from(path: String): FileSystem {
             val scheme = URI.create(path).scheme
             return when(scheme) {
                 null -> LocalFileSystem
@@ -22,8 +20,28 @@ interface FileSystem {
                 "s3" -> S3FileSystem
                 "http" -> HttpFileSystem
                 "https" -> HttpFileSystem
+                "kafka" -> KafkaFileSystem
                 else -> TODO("Unknown filesystem $scheme")
             }
         }
     }
 }
+
+abstract class StreamFileSystem: FileSystem() {
+    abstract fun read(path: String): Iterator<InputStream>
+    abstract fun write(path: String): OutputStream
+}
+
+abstract class EventFileSystem: FileSystem() {
+    abstract fun read(path: String, terminating: Boolean = true): EventReader
+    abstract fun write(path: String): EventWriter
+
+    interface EventReader : AutoCloseable {
+        fun next(): ByteArray?
+    }
+
+    interface EventWriter : AutoCloseable {
+        fun write(event: ByteArray)
+    }
+}
+

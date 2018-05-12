@@ -5,15 +5,15 @@ import java.io.OutputStream
 import java.net.URL
 
 
-object HttpFileSystem: FileSystem {
-    override fun listDir(path: String): List<String> {
-        return listOf(path)
+object HttpFileSystem: StreamFileSystem() {
+    override fun listDir(path: String): List<Map<String, Any?>> {
+        return listOf(mapOf("path" to path))
     }
 
-    override fun read(path: String): InputStream {
+    override fun read(path: String): Iterator<InputStream> {
         val connection =  URL(path).openConnection()
         connection.setRequestProperty("User-Agent", "jsonsql")
-        return connection.getInputStream()
+        return listOf(connection.getInputStream()).iterator()
     }
 
     override fun write(path: String): OutputStream {

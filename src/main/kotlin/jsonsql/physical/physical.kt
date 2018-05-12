@@ -47,7 +47,7 @@ private fun physicalOperator(operator: LogicalOperator, pathOverride: String? = 
             val sources = if (files.isEmpty()) {
                 listOf(physicalOperator(operator.sourceOperator))
             } else {
-                files.map { physicalOperator(operator.sourceOperator, it) }
+                files.map { physicalOperator(operator.sourceOperator, it["path"] as String) }
             }
 
             GatherOperator(sources)
