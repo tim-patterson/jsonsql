@@ -32,7 +32,8 @@ object ArrayInspector {
         return when(value) {
             is List<*> -> value
             is Array<*> -> value.asList()
-            else -> null
+            null -> null
+            else -> listOf(value)
         }
     }
 }

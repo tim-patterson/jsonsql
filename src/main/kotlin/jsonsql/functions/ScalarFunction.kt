@@ -36,16 +36,16 @@ object CoalesceFunction: Function.ScalarFunction() {
 // gets components out of nested objects
 object IndexFunction: TwoArgScalarFunction() {
     override fun execute(arg1: Any?, arg2: Any?): Any? {
-        val array = ArrayInspector.inspect(arg1)
-        array?.let {
-            val key = NumberInspector.inspect(arg2) ?: return null
-            return array.elementAtOrNull(key.toInt())
-        }
-
         val map = MapInspector.inspect(arg1)
         map?.let {
             val key = StringInspector.inspect(arg2) ?: return null
             return map[key]
+        }
+
+        val array = ArrayInspector.inspect(arg1)
+        array?.let {
+            val key = NumberInspector.inspect(arg2) ?: return null
+            return array.elementAtOrNull(key.toInt())
         }
 
         return null
@@ -101,5 +101,28 @@ object TumbleFunction: TwoArgScalarFunction() {
 
         // floor towards 1970
         return Instant.ofEpochMilli((val1.toEpochMilli() / val2.toMillis()) * val2.toMillis())
+    }
+}
+
+/**
+ * hopping(ts, 1min, 1hour)
+ * for a ts of 12:59 it should appear in every window from
+ * 12:00 - 12:59 (window start)
+ */
+object HoppingFunction: Function.ScalarFunction() {
+    override fun validateParameterCount(count: Int) = count == 3
+    override fun execute(args: List<Any?>): Any? {
+        val val1 = TimestampInpector.inspect(args[0])
+        val val2 = DurationInpector.inspect(args[1])
+        val val3 = DurationInpector.inspect(args[2])
+        if (val1 == null || val2 == null || val3 == null) return null
+        // same as tumbling
+        val baseMs = (val1.toEpochMilli() / val2.toMillis()) * val2.toMillis()
+
+        val periodCount = val3.toMillis() / val2.toMillis()
+
+        return (0 until periodCount).map {
+            Instant.ofEpochMilli(baseMs - it *  val2.toMillis())
+        }
     }
 }

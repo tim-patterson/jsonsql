@@ -33,6 +33,7 @@ val functionRegistry = mapOf<String, Function>(
         "and" to AndFunction,
         "coalesce" to CoalesceFunction,
         "tumble" to TumbleFunction,
+        "hopping" to HoppingFunction,
 
         // Aggregate Functions
         "count" to CountFunction,
