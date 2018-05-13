@@ -37,13 +37,6 @@ private fun physicalOperator(operator: LogicalOperator, streaming: Boolean, path
             if (streaming) {
                 StreamingGroupByOperator(operator.expressions, operator.groupByExpressions, sourceOperator, operator.linger, operator.alias)
             } else {
-
-                // The logical group by is performed by a sort by the group by keys followed by the actual group by operator
-                // Unless its an empty group by, then the sort isn't needed
-                if (operator.groupByExpressions.isNotEmpty()) {
-                    val sortExpr = operator.groupByExpressions.map { Ast.OrderExpr(it, true) }
-                    sourceOperator = SortOperator(sortExpr, sourceOperator)
-                }
                 GroupByOperator(operator.expressions, operator.groupByExpressions, sourceOperator, operator.alias)
             }
         }
