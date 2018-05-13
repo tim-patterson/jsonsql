@@ -43,10 +43,15 @@ object KafkaFileSystem: EventFileSystem() {
         consumer.seekToBeginning(topicPartitions)
 
         var records: Iterator<ByteArray> = listOf<ByteArray>().iterator()
+        val consumerThread = Thread.currentThread()
+
 
         return object: EventReader {
+            @Volatile
+            var running = true
+
             override fun next(): ByteArray? {
-                while (true) {
+                while (running) {
                     if (records.hasNext()) {
                         return records.next()
                     }
@@ -55,14 +60,21 @@ object KafkaFileSystem: EventFileSystem() {
                         return null
                     }
 
-                    records = consumer.poll(1000).iterator().asSequence().map {
+                    records = consumer.poll(500).iterator().asSequence().map {
                         it.value()
                     }.iterator()
                 }
+                consumer.close()
+                return null
             }
 
             override fun close() {
-                consumer.close()
+                // could be called by different thread in case of ctrl c
+                if (Thread.currentThread() == consumerThread) {
+                    consumer.close()
+                } else {
+                    running = false
+                }
             }
         }
     }

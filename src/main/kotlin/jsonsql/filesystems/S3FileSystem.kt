@@ -29,7 +29,7 @@ object S3FileSystem: StreamFileSystem() {
                 "key" to it.key,
                 "owner" to it.owner.displayName,
                 "storage_class" to it.storageClass,
-                "last_modified" to it.lastModified,
+                "last_modified" to it.lastModified.toInstant(),
                 "size" to it.size
             )
         })

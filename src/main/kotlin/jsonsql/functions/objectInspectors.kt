@@ -1,6 +1,11 @@
 package jsonsql.functions
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import java.time.Duration
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+
 
 object NumberInspector {
     fun inspect(value: Any?): Double? {
@@ -32,11 +37,51 @@ object ArrayInspector {
     }
 }
 
+object TimestampInpector {
+    private val dtf = DateTimeFormatter.ofPattern("[yyyyMMdd][yyyy-MM-dd][yyyy-DDD]['T'[HHmmss][HHmm][HH:mm:ss][HH:mm][.SSSSSSSSS][.SSSSSS][.SSS][.SS][.S]][OOOO][O][z][XXXXX][XXXX]['['VV']']").withZone(ZoneId.of("UTC"))
+    fun inspect(value: Any?): Instant? {
+        return when(value) {
+            is Instant -> value
+            is Number -> {
+                val l = value.toLong()
+                if (l < 20000000000L) {
+                    Instant.ofEpochSecond(l)
+                } else {
+                    Instant.ofEpochMilli(l)
+                }
+            }
+            is String -> {
+                Instant.from(dtf.parse(value))
+            }
+            else -> null
+        }
+    }
+}
+
+
+object DurationInpector {
+    fun inspect(value: Any?):Duration? {
+        return when(value) {
+            is Duration -> value
+            is Number -> {
+                val l = value.toLong()
+                Duration.ofSeconds(l)
+            }
+            is String -> {
+                Duration.parse(value)
+            }
+            else -> null
+        }
+    }
+}
+
 object StringInspector {
     private val objectWriter = ObjectMapper().writer()
+    private val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSSX")
     fun inspect(value: Any?): String? {
         return when(value) {
             is String -> value
+            is Instant -> dateFormat.format(value.atZone(ZoneId.of("UTC")))
             null -> null
             is List<*> -> objectWriter.writeValueAsString(value)
             is Map<*,*> -> objectWriter.writeValueAsString(value)

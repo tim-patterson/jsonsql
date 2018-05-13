@@ -1,5 +1,7 @@
 package jsonsql.functions
 
+import java.time.Instant
+
 
 abstract class OneArgScalarFunction: Function.ScalarFunction() {
     override fun execute(args: List<Any?>): Any? {
@@ -85,5 +87,19 @@ object IsNotNullFunction: OneArgScalarFunction() {
 object NumberFunction: OneArgScalarFunction() {
     override fun execute(arg1: Any?): Any? {
         return NumberInspector.inspect(arg1)
+    }
+}
+
+/**
+ * Used for time windowing
+ */
+object TumbleFunction: TwoArgScalarFunction() {
+    override fun execute(arg1: Any?, arg2: Any?): Any? {
+        val val1 = TimestampInpector.inspect(arg1)
+        val val2 = DurationInpector.inspect(arg2)
+        if (val1 == null || val2 == null) return null
+
+        // floor towards 1970
+        return Instant.ofEpochMilli((val1.toEpochMilli() / val2.toMillis()) * val2.toMillis())
     }
 }

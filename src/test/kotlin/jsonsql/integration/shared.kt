@@ -7,7 +7,7 @@ import org.hamcrest.Matchers
 
 fun testQuery(expr: String, expected: String) {
     val results = mutableListOf<List<Any?>>()
-    val operator = execute(expr)
+    val operator = execute(expr).root
     while (true) {
         operator.next()?.let { results.add(it) } ?: break
     }
