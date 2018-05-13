@@ -17,8 +17,11 @@ buildscript {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.2'
         classpath 'org.junit.platform:junit-platform-gradle-plugin:1.0.0'
+        classpath 'net.sf.proguard:proguard-gradle:6.0.3'
     }
 }
+
+import proguard.gradle.ProGuardTask
 
 group 'jsonsql'
 version '1.0-SNAPSHOT'
@@ -89,6 +92,35 @@ jar {
     manifest {
         attributes 'Main-Class': 'jsonsql.shell.ShellKt'
     }
+}
+
+task proguard(type: ProGuardTask, dependsOn: 'shadowJar') {
+    injars "$buildDir/libs/jsonsql.jar"
+    outjars "$buildDir/libs/min/jsonsql.jar"
+
+    if (System.getProperty('java.version').startsWith('1.')) {
+        // Before Java 9, the runtime classes were packaged in a single jar file.
+        libraryjars "${System.getProperty('java.home')}/lib/rt.jar"
+    } else {
+        // As of Java 9, the runtime classes are packaged in modular jmod files.
+        libraryjars "${System.getProperty('java.home')}/jmods/java.base.jmod", jarfilter: '!**.jar', filter: '!module-info.class'
+    }
+
+    dontobfuscate
+    dontwarn "com.**"
+    dontwarn "software.**"
+    dontwarn "org.**"
+    dontwarn "net.jpountz.util.UnsafeUtils"
+
+    keep 'public class jsonsql.shell.ShellKt { public static void main(java.lang.String[]); }'
+
+    keepclassmembers """class * extends java.lang.Enum {
+        <fields>;
+        public static **[] values();
+        public static ** valueOf(java.lang.String);
+    }"""
+
+    optimizations "!code/allocation/variable"
 }
 
 compileKotlin {

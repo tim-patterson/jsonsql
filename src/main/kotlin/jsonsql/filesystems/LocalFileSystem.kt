@@ -1,5 +1,6 @@
 package jsonsql.filesystems
 
+import jsonsql.functions.StringInspector
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
@@ -15,7 +16,7 @@ object LocalFileSystem: StreamFileSystem() {
                     "name" to it.name,
                     "parent" to it.parent,
                     "extension" to it.extension,
-                    "last_modified" to Instant.ofEpochMilli(it.lastModified()),
+                    "last_modified" to StringInspector.inspect(Instant.ofEpochMilli(it.lastModified())),
                     "size" to it.length()
             )
         }.toList()
