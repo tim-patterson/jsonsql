@@ -28,7 +28,7 @@ object S3FileSystem: StreamFileSystem() {
                 "path" to "s3://$authority/${it.key}",
                 "bucket" to it.bucketName,
                 "key" to it.key,
-                "owner" to it.owner.displayName,
+                "owner" to it.owner?.displayName,
                 "storage_class" to it.storageClass,
                 "last_modified" to StringInspector.inspect(it.lastModified.toInstant()),
                 "size" to it.size
