@@ -29,7 +29,7 @@ abstract class LogicalVisitor<C> {
     open fun visit(operator: LogicalOperator.Limit, context: C): LogicalOperator = operator.copy(sourceOperator=visit(operator.sourceOperator, context))
     open fun visit(operator: LogicalOperator.Sort, context: C): LogicalOperator =
             operator.copy(
-                    sortExpressions = operator.sortExpressions.map { visit(it, context) },
+                    sortExpressions = operator.sortExpressions.map { visit(it, operator, context) },
                     sourceOperator = visit(operator.sourceOperator, context)
             )
 
@@ -40,19 +40,19 @@ abstract class LogicalVisitor<C> {
     open fun visit(operator: LogicalOperator.Explain, context: C): LogicalOperator = operator.copy(sourceOperator = visit(operator.sourceOperator, context))
     open fun visit(operator: LogicalOperator.Project, context: C): LogicalOperator =
             operator.copy(
-                    expressions = operator.expressions.mapIndexed { index, it -> visit(it, index, context) },
+                    expressions = operator.expressions.mapIndexed { index, it -> visit(it, index, operator, context) },
                     sourceOperator = visit(operator.sourceOperator, context)
             )
 
     open fun visit(operator: LogicalOperator.Filter, context: C): LogicalOperator =
             operator.copy(
-                    predicate = visit(operator.predicate, context),
+                    predicate = visit(operator.predicate, operator, context),
                     sourceOperator = visit(operator.sourceOperator, context)
             )
 
     open fun visit(operator: LogicalOperator.LateralView, context: C): LogicalOperator =
             operator.copy(
-                    expression = visit(operator.expression, 0, context),
+                    expression = visit(operator.expression, 0, operator, context),
                     sourceOperator = visit(operator.sourceOperator, context)
             )
 
@@ -60,14 +60,14 @@ abstract class LogicalVisitor<C> {
             operator.copy(
                     sourceOperator1 = visit(operator.sourceOperator1, context),
                     sourceOperator2 = visit(operator.sourceOperator2, context),
-                    onClause = visit(operator.onClause, context)
+                    onClause = visit(operator.onClause, operator, context)
             )
 
     open fun visit(operator: LogicalOperator.GroupBy, context: C): LogicalOperator =
             operator.copy(
                     sourceOperator = visit(operator.sourceOperator, context),
-                    expressions = operator.expressions.mapIndexed { index, it -> visit(it, index, context) },
-                    groupByExpressions = operator.groupByExpressions.map { visit(it, context) }
+                    expressions = operator.expressions.mapIndexed { index, it -> visit(it, index, operator, context) },
+                    groupByExpressions = operator.groupByExpressions.map { visit(it, operator, context) }
             )
 
     open fun visit(operator: LogicalOperator.Gather, context: C): LogicalOperator =
@@ -79,23 +79,23 @@ abstract class LogicalVisitor<C> {
                     sourceOperator = visit(operator.sourceOperator, context)
             )
 
-    open fun visit(namedExpression: Ast.NamedExpr, index: Int, context: C): Ast.NamedExpr =
-        namedExpression.copy(expression = visit(namedExpression.expression, context))
+    open fun visit(namedExpression: Ast.NamedExpr, index: Int, operator: LogicalOperator, context: C): Ast.NamedExpr =
+        namedExpression.copy(expression = visit(namedExpression.expression, operator, context))
 
-    open fun visit(orderExpression: Ast.OrderExpr, context: C): Ast.OrderExpr =
-        orderExpression.copy(expression = visit(orderExpression.expression, context))
+    open fun visit(orderExpression: Ast.OrderExpr, operator: LogicalOperator, context: C): Ast.OrderExpr =
+        orderExpression.copy(expression = visit(orderExpression.expression, operator, context))
 
-    open fun visit(expression: Ast.Expression, context: C): Ast.Expression =
+    open fun visit(expression: Ast.Expression, operator: LogicalOperator, context: C): Ast.Expression =
         when(expression) {
-            is Ast.Expression.Identifier -> visit(expression, context)
-            is Ast.Expression.Constant -> visit(expression, context)
-            is Ast.Expression.Function -> visit(expression, context)
+            is Ast.Expression.Identifier -> visit(expression, operator, context)
+            is Ast.Expression.Constant -> visit(expression, operator, context)
+            is Ast.Expression.Function -> visit(expression, operator, context)
         }
 
-    open fun visit(expression: Ast.Expression.Identifier, context: C): Ast.Expression = expression
-    open fun visit(expression: Ast.Expression.Constant, context: C): Ast.Expression = expression
-    open fun visit(expression: Ast.Expression.Function, context: C): Ast.Expression =
-        expression.copy(parameters = expression.parameters.map { visit(it, context) })
+    open fun visit(expression: Ast.Expression.Identifier, operator: LogicalOperator, context: C): Ast.Expression = expression
+    open fun visit(expression: Ast.Expression.Constant, operator: LogicalOperator, context: C): Ast.Expression = expression
+    open fun visit(expression: Ast.Expression.Function, operator: LogicalOperator, context: C): Ast.Expression =
+        expression.copy(parameters = expression.parameters.map { visit(it, operator, context) })
 
     open fun visit(table: Ast.Table, context: C): Ast.Table = table
 }

@@ -72,6 +72,7 @@ fun logicalOperatorTree(stmt: Ast.Statement) : LogicalTree {
         is Ast.Statement.Insert -> LogicalTree(LogicalOperator.Write(stmt.tbl, fromSelect(stmt.select)), stmt.select.streaming)
     }
 
+    tree = NormalizeIdentifiersVisitor.visit(tree, Unit)
     tree = PopulateFieldsVisitor.visit(tree, setOf())
     validate(tree.root)
     return parallelize(tree)
@@ -83,8 +84,7 @@ private fun fromSource(node: Ast.Source): LogicalOperator {
         is Ast.Source.InlineView -> fromSelect(node.inlineView).apply { alias = node.tableAlias }
         is Ast.Source.LateralView -> {
             val source = fromSource(node.source)
-            val aliases = source.aliasesInScope()
-            val expr = (node.expression.copy(expression = normalizeIdentifiers(node.expression.expression, aliases)))
+            val expr = (node.expression.copy(expression = node.expression.expression))
             LogicalOperator.LateralView(expr, source)
         }
         is Ast.Source.Join -> fromJoin(node)
@@ -95,33 +95,29 @@ private fun fromSource(node: Ast.Source): LogicalOperator {
 private fun fromJoin(node: Ast.Source.Join): LogicalOperator.Join {
     val sourceOperator1 = fromSource(node.source1)
     val sourceOperator2 = fromSource(node.source2)
-    val aliases = sourceOperator1.aliasesInScope() + sourceOperator2.aliasesInScope()
-    val expr = normalizeIdentifiers(node.joinCondition, aliases)
+    val expr = node.joinCondition
     return LogicalOperator.Join(sourceOperator1, sourceOperator2, expr)
 }
 
 
 private fun fromSelect(node: Ast.Statement.Select): LogicalOperator {
     var operator = fromSource(node.source)
-    val aliases = operator.aliasesInScope()
 
     if (node.predicate != null) {
-        val pred = normalizeIdentifiers(node.predicate, aliases)
-        operator = LogicalOperator.Filter(pred, operator)
+        operator = LogicalOperator.Filter(node.predicate, operator)
     }
 
     // if we've got aggregation functions in the select but no group by, its really still a group by
     if (node.groupBy != null || node.expressions.map { checkForAggregate(it.expression) }.any { it } ) {
-        val groupByKeys = node.groupBy?.let { normalizeIdentifiers(it, aliases) } ?: listOf()
+        val groupByKeys = node.groupBy ?: listOf()
 
-        operator = LogicalOperator.GroupBy(normalizeIdentifiersForNamed(node.expressions, aliases), groupByKeys, node.linger, operator)
+        operator = LogicalOperator.GroupBy(node.expressions, groupByKeys, node.linger, operator)
     } else {
-        operator = LogicalOperator.Project(normalizeIdentifiersForNamed(node.expressions, aliases), operator)
+        operator = LogicalOperator.Project(node.expressions, operator)
     }
 
     if (node.orderBy != null) {
-        val orderby = node.orderBy.map { it.copy(expression = normalizeIdentifiers(it.expression, aliases)) }
-        operator = LogicalOperator.Sort(orderby, operator)
+        operator = LogicalOperator.Sort(node.orderBy, operator)
     }
 
     if (node.limit != null) {
@@ -136,8 +132,22 @@ private fun fromTable(node: Ast.Table): LogicalOperator.DataSource {
 }
 
 
+private fun checkForAggregate(expr: Ast.Expression) : Boolean {
+    return if(expr is Ast.Expression.Function) {
+        semanticAssert(expr.functionName in functionRegistry, "function \"${expr.functionName}\" not found")
+        if (functionRegistry[expr.functionName]!! is Function.AggregateFunction) {
+            true
+        } else {
+            expr.parameters.map { checkForAggregate(it) }.any { it }
+        }
+    } else {
+        false
+    }
+}
+
+
 private object PopulateFieldsVisitor: LogicalVisitor<Set<Field>>() {
-    override fun visit(namedExpression: Ast.NamedExpr, index: Int, context: Set<Field>): Ast.NamedExpr {
+    override fun visit(namedExpression: Ast.NamedExpr, index: Int, operator: LogicalOperator, context: Set<Field>): Ast.NamedExpr {
         return namedExpression.copy(alias = namedExpression.alias ?: "_col$index")
     }
 
@@ -184,63 +194,37 @@ private object PopulateFieldsVisitor: LogicalVisitor<Set<Field>>() {
     }
 }
 
-private fun checkForAggregate(expr: Ast.Expression) : Boolean {
-    return if(expr is Ast.Expression.Function) {
-        semanticAssert(expr.functionName in functionRegistry, "function \"${expr.functionName}\" not found")
-        if (functionRegistry[expr.functionName]!! is Function.AggregateFunction) {
-            true
-        } else {
-            expr.parameters.map { checkForAggregate(it) }.any { it }
-        }
-    } else {
-        false
-    }
-}
-
-
-
 
 // Tablename.identifer will be wrongly represented as idx(Tablename, identifier)
 // Tablename.identifer.subfield will be idx(Tablename, idx(identifier, subfield))
-// This function is here to correct these.
-private fun normalizeIdentifiers(expression: Ast.Expression, tableAliasesInScope: List<String>): Ast.Expression {
-    return when(expression) {
-        is Ast.Expression.Constant -> expression
-        is Ast.Expression.Identifier -> expression
-        is Ast.Expression.Function -> {
-            if (expression.functionName == "idx" && expression.parameters.size == 2) {
-                val arg1 = expression.parameters[0]
-                val arg2 = expression.parameters[1]
-                if (arg1 is Ast.Expression.Identifier && arg1.field.fieldName in tableAliasesInScope) {
-                    // This is one we need to fix, child element should either be an constant or
-                    // another idx function but this may not be the case if someone is manually using
-                    // the idx something to do something weird
-                    val tableAlias = arg1.field.fieldName
-                    when(arg2) {
-                        is Ast.Expression.Constant -> {
-                            if (arg2.value is String) return Ast.Expression.Identifier(Field(tableAlias, arg2.value))
-                        }
-                        is Ast.Expression.Function -> {
-                            if(arg2.functionName == "idx" && (arg2.parameters.first() is Ast.Expression.Constant)) {
-                                val identifierConst = arg2.parameters.first() as Ast.Expression.Constant
-                                val identifier = Ast.Expression.Identifier(Field(tableAlias, identifierConst.value as String))
-                                val params = listOf(identifier) + arg2.parameters.drop(1)
-                                return Ast.Expression.Function("idx", params)
-                            }
+// This visitor is here to correct these.
+private object NormalizeIdentifiersVisitor: LogicalVisitor<Unit>() {
+
+    override fun visit(expression: Ast.Expression.Function, operator: LogicalOperator, context: Unit): Ast.Expression {
+        if (expression.functionName == "idx" && expression.parameters.size == 2) {
+            val arg1 = expression.parameters[0]
+            val arg2 = expression.parameters[1]
+            if (arg1 is Ast.Expression.Identifier && arg1.field.fieldName in operator.children.flatMap { it.aliasesInScope() }) {
+                // This is one we need to fix, child element should either be an constant or
+                // another idx function but this may not be the case if someone is manually using
+                // the idx something to do something weird
+                val tableAlias = arg1.field.fieldName
+                when(arg2) {
+                    is Ast.Expression.Constant -> {
+                        if (arg2.value is String) return Ast.Expression.Identifier(Field(tableAlias, arg2.value))
+                    }
+                    is Ast.Expression.Function -> {
+                        if(arg2.functionName == "idx" && (arg2.parameters.first() is Ast.Expression.Constant)) {
+                            val identifierConst = arg2.parameters.first() as Ast.Expression.Constant
+                            val identifier = Ast.Expression.Identifier(Field(tableAlias, identifierConst.value as String))
+                            val params = listOf(identifier) + arg2.parameters.drop(1)
+                            return Ast.Expression.Function("idx", params)
                         }
                     }
                 }
             }
-
-            expression.copy(parameters = expression.parameters.map { normalizeIdentifiers(it, tableAliasesInScope) })
         }
+
+        return super.visit(expression, operator, context)
     }
-}
-
-private fun normalizeIdentifiers(expressions: List<Ast.Expression>, tableAliasesInScope: List<String>): List<Ast.Expression> {
-    return expressions.map { normalizeIdentifiers(it, tableAliasesInScope) }
-}
-
-private fun normalizeIdentifiersForNamed(expressions: List<Ast.NamedExpr>, tableAliasesInScope: List<String>): List<Ast.NamedExpr> {
-    return expressions.map { it.copy(expression = normalizeIdentifiers(it.expression, tableAliasesInScope)) }
 }

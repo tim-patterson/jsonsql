@@ -55,11 +55,11 @@ private object ParallelVisitor: LogicalVisitor<ParallelSafe>() {
 
     private fun insertGather(child: LogicalOperator): LogicalOperator {
         val childContext = ParallelSafe()
-        val child = super.visit(child, childContext)
+        val childT = super.visit(child, childContext)
         return if (childContext.safe) {
-            LogicalOperator.Gather(child)
+            LogicalOperator.Gather(childT)
         } else {
-            child
+            childT
         }
     }
 }
