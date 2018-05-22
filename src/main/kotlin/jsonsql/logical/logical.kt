@@ -74,7 +74,7 @@ fun logicalOperatorTree(stmt: Ast.Statement) : LogicalTree {
 
     tree = NormalizeIdentifiersVisitor.visit(tree, Unit)
     tree = PopulateFieldsVisitor.visit(tree, setOf())
-    validate(tree.root)
+    tree = validate(tree)
     return parallelize(tree)
 }
 
