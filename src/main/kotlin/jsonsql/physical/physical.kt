@@ -61,6 +61,6 @@ private fun getTableSource(operator: LogicalOperator): Ast.Table {
     return when (operator) {
         is LogicalOperator.Describe -> operator.tableDefinition
         is LogicalOperator.DataSource -> operator.tableDefinition
-        else -> operator.children().map { getTableSource(it) }.first()
+        else -> operator.children.map { getTableSource(it) }.first()
     }
 }

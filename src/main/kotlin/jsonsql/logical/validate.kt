@@ -1,60 +1,44 @@
 package jsonsql.logical
 
 import jsonsql.ast.Ast
-import jsonsql.ast.Field
 import jsonsql.functions.Function
 import jsonsql.functions.functionRegistry
-import jsonsql.safe
 
-fun validate(operator: LogicalOperator) {
-    when(operator) {
-        is LogicalOperator.Project -> {
-            operator.expressions.map { validateExpression(it.expression, operator.sourceOperator.fields()) }
+fun validate(tree: LogicalTree) = ExpressionValidator.visit(tree, Unit)
+
+
+private object ExpressionValidator: LogicalVisitor<Unit>() {
+
+    override fun visit(expression: Ast.Expression.Identifier, operator: LogicalOperator, context: Unit): Ast.Expression {
+        val field = expression.field
+        val sourceFields = operator.children.flatMap { it.fields() }
+        if (field.tableAlias != null) {
+            semanticAssert(field in sourceFields, "$field not found in $sourceFields")
+        } else {
+            val matchCount = sourceFields.count { it.fieldName == field.fieldName }
+
+            semanticAssert(matchCount > 0, "$field not found in $sourceFields")
+            semanticAssert(matchCount == 1, "$field is ambiguous in  $sourceFields")
         }
-        is LogicalOperator.LateralView -> {
-            validateExpression(operator.expression.expression, operator.sourceOperator.fields())
-        }
-        is LogicalOperator.GroupBy -> {
-            operator.expressions.map { validateExpression(it.expression, operator.sourceOperator.fields(), true) }
-            operator.groupByExpressions.map { validateExpression(it, operator.sourceOperator.fields()) }
-        }
-        is LogicalOperator.Filter -> {
-            validateExpression(operator.predicate, operator.sourceOperator.fields())
-        }
-        is LogicalOperator.Sort -> {
-            operator.sortExpressions.map { validateExpression(it.expression, operator.sourceOperator.fields()) }
-        }
+
+        return expression
     }
-    operator.children().map { validate(it) }
-}
 
-private fun validateExpression(expression: Ast.Expression, sourceFields: List<Field>, allowAggregate: Boolean = false) {
-    when(expression) {
-        is Ast.Expression.Constant -> null
-        is Ast.Expression.Identifier -> {
-            val field = expression.field
-            if (field.tableAlias != null) {
-                semanticAssert(field in sourceFields, "$field not found in $sourceFields")
-            } else {
-                val matchCount = sourceFields.count { it.fieldName == field.fieldName }
+    override fun visit(expression: Ast.Expression.Function, operator: LogicalOperator, context: Unit): Ast.Expression {
 
-                semanticAssert(matchCount > 0, "$field not found in $sourceFields")
-                semanticAssert(matchCount == 1, "$field is ambiguous in  $sourceFields")
-            }
+        semanticAssert(expression.functionName in functionRegistry, "function \"${expression.functionName}\" not found")
+        val function = functionRegistry[expression.functionName]!!
+        val sourceFields = operator.children.flatMap { it.fields() }
 
-            null
+        if (operator !is LogicalOperator.GroupBy) {
+            semanticAssert(function is Function.ScalarFunction, "function \"${expression.functionName}\" - aggregate functions not allowed here")
         }
-        is Ast.Expression.Function -> {
-            semanticAssert(expression.functionName in functionRegistry, "function \"${expression.functionName}\" not found")
-            val function = functionRegistry[expression.functionName]!!
-            if (!allowAggregate) {
-                semanticAssert(function is Function.ScalarFunction, "function \"${expression.functionName}\" - aggregate functions not allowed here")
-            }
-            val paramCount = expression.parameters.size
-            semanticAssert(function.validateParameterCount(paramCount), "function \"${expression.functionName}\" not valid for $paramCount parameters")
-            expression.parameters.map { validateExpression(it, sourceFields, allowAggregate) }
-        }
-    }.safe
+        val paramCount = expression.parameters.size
+        semanticAssert(function.validateParameterCount(paramCount), "function \"${expression.functionName}\" not valid for $paramCount parameters")
+
+        return super.visit(expression, operator, context)
+    }
+
 }
 
 
