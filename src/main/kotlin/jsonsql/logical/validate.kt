@@ -25,7 +25,7 @@ fun validate(operator: LogicalOperator) {
             operator.sortExpressions.map { validateExpression(it.expression, operator.sourceOperator.fields()) }
         }
     }
-    operator.children().map { validate(it) }
+    operator.children.map { validate(it) }
 }
 
 private fun validateExpression(expression: Ast.Expression, sourceFields: List<Field>, allowAggregate: Boolean = false) {

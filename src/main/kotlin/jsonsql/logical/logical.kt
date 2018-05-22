@@ -5,72 +5,59 @@ import jsonsql.ast.Field
 import jsonsql.functions.Function
 import jsonsql.functions.functionRegistry
 
-sealed class LogicalOperator {
+sealed class LogicalOperator(vararg val children: LogicalOperator) {
+    abstract var alias: String?
     abstract fun fields(): List<Field>
-    abstract fun children(): List<LogicalOperator>
-    // An Alias can be set at a operator level (ie table, or subselect)
-    var alias: String? = null
+
     // this is really aliases in scope for anything that uses this operator as a source
-    open fun aliasesInScope(): List<String> = alias?.let { listOf(it) } ?: children().flatMap { it.aliasesInScope() }
+    open fun aliasesInScope(): List<String> = alias?.let { listOf(it) } ?: children.flatMap { it.aliasesInScope() }
 
-    data class Project(var expressions: List<Ast.NamedExpr>, var sourceOperator: LogicalOperator): LogicalOperator() {
+    data class Project(val expressions: List<Ast.NamedExpr>, val sourceOperator: LogicalOperator, override var alias: String? = null): LogicalOperator(sourceOperator) {
         override fun fields() = expressions.map { Field(alias, it.alias!!) }
-        override fun children() = listOf(sourceOperator)
     }
 
-    data class LateralView(var expression: Ast.NamedExpr, var sourceOperator: LogicalOperator): LogicalOperator() {
+    data class LateralView(val expression: Ast.NamedExpr, val sourceOperator: LogicalOperator, override var alias: String? = null): LogicalOperator(sourceOperator) {
         override fun fields() = sourceOperator.fields().filterNot { it.fieldName == expression.alias!!} + Field(alias, expression.alias!!)
-        override fun children() = listOf(sourceOperator)
     }
 
-    data class Filter(var predicate: Ast.Expression, var sourceOperator: LogicalOperator): LogicalOperator() {
+    data class Filter(val predicate: Ast.Expression, val sourceOperator: LogicalOperator, override var alias: String? = null): LogicalOperator(sourceOperator) {
         override fun fields() = sourceOperator.fields()
-        override fun children() = listOf(sourceOperator)
     }
 
-    data class Sort(var sortExpressions: List<Ast.OrderExpr>, var sourceOperator: LogicalOperator): LogicalOperator() {
+    data class Sort(val sortExpressions: List<Ast.OrderExpr>, val sourceOperator: LogicalOperator, override var alias: String? = null): LogicalOperator(sourceOperator) {
         override fun fields() = sourceOperator.fields()
-        override fun children() = listOf(sourceOperator)
     }
 
-    data class Limit(var limit: Int, var sourceOperator: LogicalOperator): LogicalOperator() {
+    data class Limit(val limit: Int, val sourceOperator: LogicalOperator, override var alias: String? = null): LogicalOperator(sourceOperator) {
         override fun fields() = sourceOperator.fields()
-        override fun children() = listOf(sourceOperator)
     }
 
-    data class Describe(var tableDefinition: Ast.Table): LogicalOperator() {
+    data class Describe(val tableDefinition: Ast.Table, override var alias: String? = null): LogicalOperator() {
         override fun fields() = listOf("column_name", "column_type").map { Field(alias, it) }
-        override fun children() = listOf<LogicalOperator>()
     }
 
-    data class DataSource(var fields: List<String>, var tableDefinition: Ast.Table): LogicalOperator() {
+    data class DataSource(val fields: List<String>, val tableDefinition: Ast.Table, override var alias: String? = null): LogicalOperator() {
         override fun fields() = fields.map { Field(alias, it) }
-        override fun children() = listOf<LogicalOperator>()
     }
 
-    data class Explain(var sourceOperator: LogicalOperator): LogicalOperator() {
+    data class Explain(val sourceOperator: LogicalOperator, override var alias: String? = null): LogicalOperator(sourceOperator) {
         override fun fields() = listOf(Field(null, "plan"))
-        override fun children() = listOf(sourceOperator)
     }
 
-    data class GroupBy(var expressions: List<Ast.NamedExpr>, var groupByExpressions: List<Ast.Expression>, val linger: Double, var sourceOperator: LogicalOperator): LogicalOperator() {
+    data class GroupBy(val expressions: List<Ast.NamedExpr>, val groupByExpressions: List<Ast.Expression>, val linger: Double, val sourceOperator: LogicalOperator, override var alias: String? = null): LogicalOperator(sourceOperator) {
         override fun fields() = expressions.map { Field(alias, it.alias!!) }
-        override fun children() = listOf(sourceOperator)
     }
 
-    data class Join(var sourceOperator1: LogicalOperator, var sourceOperator2: LogicalOperator, var onClause: Ast.Expression): LogicalOperator() {
+    data class Join(val sourceOperator1: LogicalOperator, val sourceOperator2: LogicalOperator, val onClause: Ast.Expression, override var alias: String? = null): LogicalOperator(sourceOperator1, sourceOperator2) {
         override fun fields() = sourceOperator1.fields() + sourceOperator2.fields()
-        override fun children() = listOf(sourceOperator1, sourceOperator2)
     }
 
-    data class Gather(var sourceOperator: LogicalOperator): LogicalOperator() {
+    data class Gather(val sourceOperator: LogicalOperator, override var alias: String? = null): LogicalOperator(sourceOperator) {
         override fun fields() = sourceOperator.fields()
-        override fun children() = listOf(sourceOperator)
     }
 
-    data class Write(var tableDefinition: Ast.Table, var sourceOperator: LogicalOperator): LogicalOperator() {
+    data class Write(val tableDefinition: Ast.Table, val sourceOperator: LogicalOperator, override var alias: String? = null): LogicalOperator(sourceOperator) {
         override fun fields() = listOf(Field(null, "Result"))
-        override fun children() = listOf(sourceOperator)
     }
 }
 
@@ -78,15 +65,16 @@ data class LogicalTree(val root: LogicalOperator, val streaming: Boolean)
 
 
 fun logicalOperatorTree(stmt: Ast.Statement) : LogicalTree {
-    val tree = when(stmt) {
+    var tree = when(stmt) {
         is Ast.Statement.Describe -> LogicalTree(LogicalOperator.Describe(stmt.tbl), false)
         is Ast.Statement.Select -> LogicalTree(fromSelect(stmt), stmt.streaming)
         is Ast.Statement.Explain -> LogicalTree(LogicalOperator.Explain(fromSelect(stmt.select)), stmt.select.streaming)
         is Ast.Statement.Insert -> LogicalTree(LogicalOperator.Write(stmt.tbl, fromSelect(stmt.select)), stmt.select.streaming)
     }
-    populateFields(tree.root)
+
+    tree = PopulateFieldsVisitor.visit(tree, setOf())
     validate(tree.root)
-    return tree.copy(root = parallelize(tree.root))
+    return parallelize(tree)
 }
 
 private fun fromSource(node: Ast.Source): LogicalOperator {
@@ -148,60 +136,51 @@ private fun fromTable(node: Ast.Table): LogicalOperator.DataSource {
 }
 
 
-private fun populateFields(operator: LogicalOperator, neededFields: List<Field> = listOf()) {
-    when(operator) {
-        is LogicalOperator.Project -> {
-            // Make sure all columns are named
-            operator.expressions = operator.expressions.mapIndexed { index, expr ->
-                val alias = expr.alias ?: "_col$index"
-                Ast.NamedExpr(expr.expression, alias)
-            }
+private object PopulateFieldsVisitor: LogicalVisitor<Set<Field>>() {
+    override fun visit(namedExpression: Ast.NamedExpr, index: Int, context: Set<Field>): Ast.NamedExpr {
+        return namedExpression.copy(alias = namedExpression.alias ?: "_col$index")
+    }
 
-            val upstreamFieldsNeeded = operator.expressions.flatMap { neededFields(it.expression) }.distinct()
+    override fun visit(operator: LogicalOperator.Project, context: Set<Field>): LogicalOperator {
+        return super.visit(operator, operator.expressions.flatMap { neededFields(it.expression) }.toSet() )
+    }
 
-            populateFields(operator.sourceOperator, upstreamFieldsNeeded)
+    override fun visit(operator: LogicalOperator.GroupBy, context: Set<Field>): LogicalOperator {
+        val allexprs = operator.groupByExpressions + operator.expressions.map { it.expression }
+        return super.visit(operator, allexprs.flatMap { neededFields(it) }.toSet())
+    }
+
+    override fun visit(operator: LogicalOperator.Filter, context: Set<Field>): LogicalOperator {
+        return super.visit(operator, context + neededFields(operator.predicate))
+    }
+
+    override fun visit(operator: LogicalOperator.Sort, context: Set<Field>): LogicalOperator {
+        val upstreamFieldsNeeded = context + operator.sortExpressions.flatMap { neededFields(it.expression) }
+        return super.visit(operator, upstreamFieldsNeeded)
+    }
+
+    override fun visit(operator: LogicalOperator.LateralView, context: Set<Field>): LogicalOperator {
+        semanticAssert(operator.expression.alias != null, "Lateral View must have alias")
+        val upstreamFieldsNeeded = neededFields(operator.expression.expression) + context
+        return super.visit(operator, upstreamFieldsNeeded)
+    }
+
+    override fun visit(operator: LogicalOperator.Join, context: Set<Field>): LogicalOperator {
+        return super.visit(operator, neededFields(operator.onClause) + context)
+    }
+
+    override fun visit(operator: LogicalOperator.DataSource, context: Set<Field>): LogicalOperator {
+        val fields = context.filter {  it.tableAlias == null || it.tableAlias == operator.alias }
+                .map { it.fieldName }.distinct()
+        return operator.copy(fields = fields)
+    }
+
+    private fun neededFields(expression: Ast.Expression): Set<Field> {
+        return when (expression) {
+            is Ast.Expression.Identifier -> setOf(expression.field)
+            is Ast.Expression.Constant -> setOf()
+            is Ast.Expression.Function -> expression.parameters.flatMap(::neededFields).toSet()
         }
-
-        is LogicalOperator.GroupBy -> {
-            // Make sure all columns are named
-            operator.expressions = operator.expressions.mapIndexed { index, expr ->
-                val alias = expr.alias ?: "_col$index"
-                Ast.NamedExpr(expr.expression, alias)
-            }
-
-            val allexprs = operator.groupByExpressions + operator.expressions.map { it.expression }
-
-            val upstreamFieldsNeeded = allexprs.flatMap { neededFields(it) }.distinct()
-
-            populateFields(operator.sourceOperator, upstreamFieldsNeeded)
-        }
-
-        is LogicalOperator.Filter -> {
-            val upstreamFieldsNeeded = (neededFields(operator.predicate) + neededFields).distinct()
-            populateFields(operator.sourceOperator, upstreamFieldsNeeded)
-        }
-
-        is LogicalOperator.Sort -> {
-            val upstreamFieldsNeeded = (operator.sortExpressions.flatMap { neededFields(it.expression) } + neededFields).distinct()
-            populateFields(operator.sourceOperator, upstreamFieldsNeeded)
-        }
-
-        is LogicalOperator.LateralView -> {
-            val upstreamFieldsNeeded = (neededFields(operator.expression.expression) + neededFields).distinct()
-            val alias = operator.expression.alias
-            semanticAssert(alias != null, "Lateral View must have alias")
-            operator.expression = operator.expression.copy(alias = alias)
-            populateFields(operator.sourceOperator, upstreamFieldsNeeded)
-        }
-        is LogicalOperator.Join -> {
-            val upstreamFieldsNeeded = (neededFields(operator.onClause) + neededFields).distinct()
-            populateFields(operator.sourceOperator1, upstreamFieldsNeeded)
-            populateFields(operator.sourceOperator2, upstreamFieldsNeeded)
-        }
-        is LogicalOperator.DataSource -> {
-            operator.fields = neededFields.filter { it.tableAlias == null || it.tableAlias == operator.alias }.map { it.fieldName }.distinct()
-        }
-        else -> operator.children().forEach { populateFields(it) }
     }
 }
 
@@ -218,14 +197,6 @@ private fun checkForAggregate(expr: Ast.Expression) : Boolean {
     }
 }
 
-
-private fun neededFields(expression: Ast.Expression): List<Field> {
-    return when (expression) {
-        is Ast.Expression.Identifier -> listOf(expression.field)
-        is Ast.Expression.Constant -> listOf()
-        is Ast.Expression.Function -> expression.parameters.flatMap(::neededFields)
-    }.distinct()
-}
 
 
 
