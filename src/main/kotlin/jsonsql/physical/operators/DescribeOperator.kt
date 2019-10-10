@@ -7,23 +7,25 @@ import jsonsql.fileformats.FileFormat
 import jsonsql.physical.PhysicalOperator
 
 
-class DescribeOperator(val table: Ast.Table): PhysicalOperator() {
-    private val columns: Iterator<Pair<String,String>> by lazy(::scanTable)
+class DescribeOperator(val table: Ast.Table, val tableOutput: Boolean): PhysicalOperator() {
+    private val columns: Iterator<List<String>> by lazy(::scanTable)
 
-    override fun columnAliases() = listOf("column_name", "column_type").map { Field(null, it) }
+    override fun columnAliases() = if(tableOutput) {
+        listOf("schema")
+    } else {
+        listOf("column_name", "column_type")
+    }.map { Field(null, it) }
 
     override fun compile() {}
 
     override fun next(): List<Any?>? {
         if (!columns.hasNext()) return null
-
-        val row = columns.next()
-        return arrayListOf(row.first, row.second)
+        return columns.next()
     }
 
     override fun close() {} // Noop
 
-    private fun scanTable(): Iterator<Pair<String,String>> {
+    private fun scanTable(): Iterator<List<String>> {
         val cols = mutableMapOf<String, UsedTypes>()
 
         val tableReader = FileFormat.reader(table, true)
@@ -37,12 +39,29 @@ class DescribeOperator(val table: Ast.Table): PhysicalOperator() {
             }
         }
         tableReader.close()
-        val outRows = cols.map { it.key to it.value.toString() }
-        return if (table.type == TableType.JSON) {
-            outRows.sortedBy { it.first }.iterator()
+
+        val outRows = if (table.type == TableType.JSON) {
+            cols.toSortedMap()
         } else {
-            outRows.iterator()
+            cols
         }
+
+
+        return if(tableOutput) {
+            val rows = outRows.map {
+                it.value.tableString("  ")
+
+                "  ${it.key} ${it.value.tableString("  ").trimStart()}"
+            }.joinToString(",\n")
+
+            listOf(listOf("""
+CREATE TABLE '${table.path}' (
+$rows
+)
+"""))
+        } else {
+            outRows.map { listOf(it.key, it.value.toString()) }
+        }.iterator()
     }
 
     private fun populateUsedTypes(usedTypes: UsedTypes, value: Any?) {
@@ -84,6 +103,40 @@ class DescribeOperator(val table: Ast.Table): PhysicalOperator() {
             if (couldBeArray) descriptions.add("Array<${arrayEntries!!}>")
             if (couldBeStruct) descriptions.add("Struct<$structEntries>")
             return descriptions.joinToString(" OR ")
+        }
+
+        fun tableString(baseIndent: String): String {
+            val types = listOf(couldBeNumber, couldBeString, couldBeBoolean, couldBeArray, couldBeStruct).filter { it }
+            if(types.isEmpty()) return "${baseIndent}NULL"
+
+            val union = types.size > 1
+
+            val unionItems = mutableListOf<String>()
+            val indent = if(union) "$baseIndent  " else baseIndent
+
+
+            if (couldBeNumber) unionItems.add("${indent}NUMBER")
+            if (couldBeString) unionItems.add("${indent}STRING")
+            if (couldBeBoolean) unionItems.add("${indent}BOOLEAN")
+            if (couldBeArray) {
+                unionItems.add("${indent}ARRAY<" + arrayEntries!!.tableString(indent).trimStart() + ">")
+            }
+            if (couldBeStruct) {
+                if (structEntries.isEmpty()) {
+                    unionItems.add("${indent}STRUCT<>")
+                } else {
+                    val entryString = structEntries.map { (key, value) ->
+                        "$indent  $key: " + value.tableString("$indent  ").trimStart()
+                    }.joinToString(",\n")
+                    unionItems.add("${indent}STRUCT<\n" + entryString + "\n${indent}>")
+                }
+            }
+
+            return if (union) {
+                "${baseIndent}UNION<\n${unionItems.joinToString(",\n")}\n${baseIndent}>"
+            } else {
+                unionItems.first()
+            }
         }
     }
 }

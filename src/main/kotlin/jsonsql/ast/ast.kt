@@ -10,7 +10,7 @@ sealed class Ast {
     sealed class Statement: Ast() {
         data class Explain(val select: Select): Statement()
         data class Select(val expressions: List<NamedExpr>, val source: Source, val predicate: Expression?=null, val groupBy: List<Expression>?=null, val linger: Double, val orderBy: List<OrderExpr>?=null, val limit: Int?=null, val streaming: Boolean) : Statement()
-        data class Describe(val tbl: Table) : Statement()
+        data class Describe(val tbl: Table, val tableOutput: Boolean) : Statement()
         data class Insert(val select: Select, val tbl: Table): Statement()
     }
 
@@ -73,7 +73,8 @@ private fun parseStmt(stmt: SqlParser.StmtContext): Ast.Statement {
 }
 
 private fun parseDescribeStmt(describe: SqlParser.Describe_stmtContext): Ast.Statement.Describe {
-    return Ast.Statement.Describe(parseTable(describe.table()))
+    val tableSyntax = describe.TABLE() != null
+    return Ast.Statement.Describe(parseTable(describe.table()), tableSyntax)
 }
 
 private fun parseSelectStmt(select: SqlParser.Select_stmtContext): Ast.Statement.Select {

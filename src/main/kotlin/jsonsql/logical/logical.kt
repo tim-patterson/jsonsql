@@ -32,8 +32,12 @@ sealed class LogicalOperator(vararg val children: LogicalOperator) {
         override fun fields() = sourceOperator.fields()
     }
 
-    data class Describe(val tableDefinition: Ast.Table, override var alias: String? = null): LogicalOperator() {
-        override fun fields() = listOf("column_name", "column_type").map { Field(alias, it) }
+    data class Describe(val tableDefinition: Ast.Table, val tableOutput: Boolean, override var alias: String? = null): LogicalOperator() {
+        override fun fields() = if(tableOutput) {
+            listOf("schema")
+        } else {
+            listOf("column_name", "column_type")
+        }.map { Field(alias, it) }
     }
 
     data class DataSource(val fields: List<String>, val tableDefinition: Ast.Table, override var alias: String? = null): LogicalOperator() {
@@ -66,7 +70,7 @@ data class LogicalTree(val root: LogicalOperator, val streaming: Boolean)
 
 fun logicalOperatorTree(stmt: Ast.Statement) : LogicalTree {
     var tree = when(stmt) {
-        is Ast.Statement.Describe -> LogicalTree(LogicalOperator.Describe(stmt.tbl), false)
+        is Ast.Statement.Describe -> LogicalTree(LogicalOperator.Describe(stmt.tbl, stmt.tableOutput), false)
         is Ast.Statement.Select -> LogicalTree(fromSelect(stmt), stmt.streaming)
         is Ast.Statement.Explain -> LogicalTree(LogicalOperator.Explain(fromSelect(stmt.select)), stmt.select.streaming)
         is Ast.Statement.Insert -> LogicalTree(LogicalOperator.Write(stmt.tbl, fromSelect(stmt.select)), stmt.select.streaming)

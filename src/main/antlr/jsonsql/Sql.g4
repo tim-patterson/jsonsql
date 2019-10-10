@@ -48,6 +48,7 @@ predicate
 
 describe_stmt
   : DESCRIBE table
+  | DESCRIBE table AS TABLE
   ;
 
 expr
@@ -135,6 +136,7 @@ INSERT: I N S E R T;
 INTO: I N T O;
 STREAMING: S T R E A M I N G;
 LINGER: L I N G E R;
+TABLE: T A B L E;
 
 
 OP_PLUS: '+';
