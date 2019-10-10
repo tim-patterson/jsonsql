@@ -3,11 +3,12 @@ package jsonsql.filesystems
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.URI
+import java.util.zip.GZIPInputStream
 
 sealed class FileSystem {
     // String to list of file attributes
     // each must contain a "path" attribute
-    abstract fun listDir(path: String): List<Map<String, Any?>>
+    abstract fun listDir(path: String): Sequence<Map<String, Any?>>
 
     companion object {
         fun listDir(path: String) = from(path).listDir(path)
@@ -15,11 +16,11 @@ sealed class FileSystem {
         fun from(path: String): FileSystem {
             val scheme = URI.create(path).scheme
             return when(scheme) {
-                null -> LocalFileSystem
-                "file" -> LocalFileSystem
-                "s3" -> S3FileSystem
-                "http" -> HttpFileSystem
-                "https" -> HttpFileSystem
+                null -> CompressionFileSystemDecorator(LocalFileSystem)
+                "file" -> CompressionFileSystemDecorator(LocalFileSystem)
+                "s3" -> CompressionFileSystemDecorator(S3FileSystem)
+                "http" ->CompressionFileSystemDecorator(HttpFileSystem)
+                "https" -> CompressionFileSystemDecorator(HttpFileSystem)
                 "kafka" -> KafkaFileSystem
                 "dummy" -> DummyFileSystem
                 else -> TODO("Unknown filesystem $scheme")
@@ -28,8 +29,28 @@ sealed class FileSystem {
     }
 }
 
+class CompressionFileSystemDecorator(private val fs: StreamFileSystem): StreamFileSystem() {
+
+    override fun readSingle(file: Map<String, Any?>): InputStream {
+        var path = file.getOrDefault("path", "") as String
+        return if (path.endsWith(".gz") || path.endsWith(".gzip")) {
+            GZIPInputStream(fs.readSingle(file))
+        } else {
+            fs.readSingle(file)
+        }
+    }
+
+    override fun listDir(path: String) = fs.listDir(path)
+    override fun write(path: String) = fs.write(path)
+}
+
 abstract class StreamFileSystem: FileSystem() {
-    abstract fun read(path: String): Iterator<InputStream>
+    fun read(path: String): Iterator<InputStream> {
+        return listDir(path).filter { it.getOrDefault("size",1) != 0 }.map {
+            readSingle(it)
+        }.iterator()
+    }
+    abstract fun readSingle(file: Map<String, Any?>): InputStream
     abstract fun write(path: String): OutputStream
 }
 

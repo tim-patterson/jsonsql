@@ -4,6 +4,7 @@ import com.amazonaws.SdkClientException
 import com.amazonaws.regions.DefaultAwsRegionProviderChain
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.amazonaws.services.s3.model.ObjectMetadata
+import com.amazonaws.services.s3.model.S3ObjectSummary
 import jsonsql.functions.StringInspector
 import java.io.*
 import java.net.URI
@@ -16,48 +17,34 @@ object S3FileSystem: StreamFileSystem() {
             .withRegion(try { DefaultAwsRegionProviderChain().region } catch (e: SdkClientException) { "ap-southeast-2" })
             .build()
 
-    override fun listDir(path: String): List<Map<String, Any?>> {
+    override fun listDir(path: String): Sequence<Map<String, Any?>> {
         val s3Uri = URI.create(path)
         val authority = s3Uri.authority
         val prefix = s3Uri.path.trimStart('/')
         val results = mutableListOf<Map<String, Any?>>()
 
         var listing = s3.listObjects(authority, prefix)
-        results.addAll(listing.objectSummaries.map {
-            mapOf(
-                "path" to "s3://$authority/${it.key}",
-                "bucket" to it.bucketName,
-                "key" to it.key,
-                "owner" to it.owner?.displayName,
-                "storage_class" to it.storageClass,
-                "last_modified" to StringInspector.inspect(it.lastModified.toInstant()),
-                "size" to it.size
-            )
-        })
 
-        while(listing.isTruncated) {
+        return generateSequence(listing) {
             listing = s3.listNextBatchOfObjects(listing)
-            results.addAll(listing.objectSummaries.map {
-                mapOf(
-                        "path" to "s3://$authority/${it.key}",
-                        "bucket" to it.bucketName,
-                        "key" to it.key,
-                        "owner" to it.owner.displayName,
-                        "storage_class" to it.storageClass,
-                        "last_modified" to it.lastModified,
-                        "size" to it.size
-                )
-            })
+            if(listing.isTruncated) listing else null
+        }.flatMap { it.objectSummaries.asSequence() }
+        .map {
+            mapOf(
+                    "path" to "s3://$authority/${it.key}",
+                    "bucket" to it.bucketName,
+                    "key" to it.key,
+                    "owner" to it.owner?.displayName,
+                    "storage_class" to it.storageClass,
+                    "last_modified" to StringInspector.inspect(it.lastModified.toInstant()),
+                    "size" to it.size
+            )
         }
-        return results
     }
 
 
-    override fun read(path: String): Iterator<InputStream> {
-        return listDir(path).filter { it["size"] != 0 }.asSequence().map {
-            s3.getObject(it["bucket"] as String, it["key"] as String).objectContent
-        }.iterator()
-
+    override fun readSingle(file: Map<String, Any?>): InputStream {
+        return s3.getObject(file["bucket"] as String, file["key"] as String).objectContent
     }
 
     override fun write(path: String): OutputStream {

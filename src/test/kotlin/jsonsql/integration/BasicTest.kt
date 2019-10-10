@@ -43,9 +43,18 @@ object BasicTest: Spek({
             """.trimIndent())
         }
 
+        it("simple select csv gzipped") {
+            testQuery("select field1, field2 from csv 'test_data/simple.csv.gz';", """
+                1 | quoted ,
+                2 | null
+                escaped , | foobar
+            """.trimIndent())
+        }
+
         it("select dir") {
             testQuery("select extension, count(), sum(size) from dir 'test_data' where parent='test_data' group by extension order by extension;", """
                 csv | 1.0 | 53.0
+                gz | 1.0 | 80.0
                 json | 5.0 | 2015.0
             """.trimIndent())
         }

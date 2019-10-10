@@ -8,7 +8,7 @@ import java.net.URI
 import java.time.Instant
 
 object LocalFileSystem: StreamFileSystem() {
-    override fun listDir(path: String): List<Map<String, Any?>> {
+    override fun listDir(path: String): Sequence<Map<String, Any?>> {
         return file(path).walk().filter { it.isFile }.map {
             val filePath = it.absoluteFile.toURI().toString()
             mapOf(
@@ -19,13 +19,11 @@ object LocalFileSystem: StreamFileSystem() {
                     "last_modified" to StringInspector.inspect(Instant.ofEpochMilli(it.lastModified())),
                     "size" to it.length()
             )
-        }.toList()
+        }
     }
 
-    override fun read(path: String): Iterator<InputStream> {
-        return listDir(path).filter { it["size"] != 0 }.asSequence().map {
-            file(it["path"] as String).inputStream()
-        }.iterator()
+    override fun readSingle(file: Map<String, Any?>): InputStream {
+        return file(file["path"] as String).inputStream()
     }
 
     override fun write(path: String): OutputStream {

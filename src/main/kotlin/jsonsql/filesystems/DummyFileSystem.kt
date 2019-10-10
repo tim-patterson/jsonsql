@@ -2,9 +2,9 @@ package jsonsql.filesystems
 
 
 object DummyFileSystem: EventFileSystem() {
-    override fun listDir(path: String): List<Map<String, Any?>> {
+    override fun listDir(path: String): Sequence<Map<String, Any?>> {
 
-        return listOf(mapOf(
+        return sequenceOf(mapOf(
                     "path" to path
             ))
 

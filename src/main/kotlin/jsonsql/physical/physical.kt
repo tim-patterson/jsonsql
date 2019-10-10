@@ -43,10 +43,10 @@ private fun physicalOperator(operator: LogicalOperator, streaming: Boolean, path
         is LogicalOperator.Gather -> {
             val tableSource = getTableSource(operator.sourceOperator)
             val files = FileSystem.listDir(tableSource.path)
-            val sources = if (files.isEmpty()) {
+            val sources = if (files.none()) {
                 listOf(physicalOperator(operator.sourceOperator, streaming))
             } else {
-                files.map { physicalOperator(operator.sourceOperator, streaming, it["path"] as String) }
+                files.map { physicalOperator(operator.sourceOperator, streaming, it["path"] as String) }.toList()
             }
 
             GatherOperator(sources, streaming)

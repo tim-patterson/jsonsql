@@ -32,7 +32,7 @@ class DescribeOperator(val table: Ast.Table): PhysicalOperator() {
             val json = tableReader.next()
             json ?: break
             json.forEach { (key, value) ->
-                val usedTypes = cols.computeIfAbsent(key, { UsedTypes() })
+                val usedTypes = cols.computeIfAbsent(key) { UsedTypes() }
                 populateUsedTypes(usedTypes, value)
             }
         }

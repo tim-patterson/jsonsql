@@ -6,13 +6,13 @@ import java.net.URI
 
 
 object KafkaFileSystem: EventFileSystem() {
-    override fun listDir(path: String): List<Map<String, Any?>> {
+    override fun listDir(path: String): Sequence<Map<String, Any?>> {
         val kafkaUri = URI(path)
         val topicName = kafkaUri.path.substringBeforeLast(":").trim('/')
         val partition = kafkaUri.path.substringAfterLast(":", "").toIntOrNull()
 
         return if (partition != null) {
-            listOf(mapOf(
+            sequenceOf(mapOf(
                     "path" to path,
                     "topic" to topicName,
                     "partition" to partition
@@ -26,7 +26,7 @@ object KafkaFileSystem: EventFileSystem() {
                             "topic" to topicName,
                             "partition" to it.partition()
                     )
-                }
+                }.asSequence()
             }
         }
 
@@ -36,7 +36,7 @@ object KafkaFileSystem: EventFileSystem() {
         val consumer = client(path)
         val topicPartitions = listDir(path).map {
             TopicPartition(it["topic"] as String, it["partition"] as Int)
-        }
+        }.toList()
         consumer.assign(topicPartitions)
         consumer.seekToEnd(topicPartitions)
         val endOffsets = topicPartitions.zip(topicPartitions.map { consumer.position(it) })
