@@ -21,7 +21,8 @@ sealed class FileSystem {
                 "s3" -> CompressionFileSystemDecorator(S3FileSystem)
                 "http" ->CompressionFileSystemDecorator(HttpFileSystem)
                 "https" -> CompressionFileSystemDecorator(HttpFileSystem)
-                "kafka" -> KafkaFileSystem
+                // TODO Kafka client seems to have issues with graal native-image
+                //"kafka" -> KafkaFileSystem
                 "dummy" -> DummyFileSystem
                 else -> TODO("Unknown filesystem $scheme")
             }
