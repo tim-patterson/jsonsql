@@ -25,9 +25,7 @@ private object ExpressionValidator: LogicalVisitor<Unit>() {
     }
 
     override fun visit(expression: Ast.Expression.Function, operator: LogicalOperator, context: Unit): Ast.Expression {
-
-        semanticAssert(expression.functionName in functionRegistry, "function \"${expression.functionName}\" not found")
-        val function = functionRegistry[expression.functionName]!!
+        val function = functionRegistry[expression.functionName] ?: error("function \"${expression.functionName}\" not found")
         val sourceFields = operator.children.flatMap { it.fields() }
 
         if (operator !is LogicalOperator.GroupBy) {
@@ -44,8 +42,6 @@ private object ExpressionValidator: LogicalVisitor<Unit>() {
 
 fun semanticAssert(condition: Boolean, msg: String){
     if (!condition) {
-        throw SemanticValidationError(msg)
+        error(msg)
     }
 }
-
-class SemanticValidationError(msg: String): Exception(msg)

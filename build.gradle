@@ -61,7 +61,7 @@ dependencies {
     compile "com.amazonaws:aws-java-sdk-s3:$aws_sdk_version"
     compile "com.amazonaws:aws-java-sdk-sts:$aws_sdk_version"
     compile "org.apache.kafka:kafka-clients:$kafka_version"
-    // compileOnly "com.oracle.substratevm:svm:$graalvm_version"
+    compileOnly "com.oracle.substratevm:svm:$graalvm_version"
     compile ("com.github.prasanthj:hyperloglog:$hll_version") {
         exclude group: "commons-cli"
     }
@@ -83,8 +83,8 @@ compileKotlin {
 }
 
 shadowJar {
-    classifier = null
-    version = null
+    archiveClassifier = null
+    archiveVersion = null
 }
 
 jar {
