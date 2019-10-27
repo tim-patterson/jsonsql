@@ -6,7 +6,14 @@
 A standalone app that allows querying of newline delimited json using simple sql expressions
 
 ## Getting Started
-All that's required to get started is to checkout the code and then compile and run. ie:
+The easiest way of getting started if you're on OSX is to just brew install the code.
+```sh
+brew install tim-patterson/tap/jsonsql
+```
+This will install the latest version that has been compiled natively so as to not need java installed.
+
+## Running from source
+To build and run from source instead simply run the following
 ```sh
 git clone git@github.com:tim-patterson/jsonsql.git
 cd jsonsql
