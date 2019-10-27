@@ -40,7 +40,7 @@ class GatherOperator(val sources: List<PhysicalOperator>, val allAtOnce: Boolean
 
     private fun runChildren(): BlockingQueue<List<Any?>> {
         val queue = ArrayBlockingQueue<List<Any?>>(1024)
-        executorPool = if (allAtOnce) Executors.newFixedThreadPool(sources.size) else Executors.newWorkStealingPool()
+        executorPool = if (allAtOnce) Executors.newFixedThreadPool(sources.size) else Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2)
         val tasks = sources.map { source ->
             Callable<Unit> {
                 while (!Thread.interrupted()) {

@@ -6,6 +6,7 @@ import jsonsql.functions.StringInspector
 import jsonsql.physical.PhysicalOperator
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.Token
+import org.graalvm.nativeimage.ProcessProperties
 import org.jline.reader.*
 import org.jline.reader.impl.history.DefaultHistory
 import org.jline.terminal.Terminal
@@ -21,6 +22,18 @@ import java.io.StringWriter
 fun main(args: Array<String>) {
     // Disable stupid s3 partial stream warnings
     System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.NoOpLog")
+
+    // set java lib path for loading libsunec.
+    try {
+        val exeFile = File(ProcessProperties.getExecutableName()).absoluteFile
+        val parentDir = exeFile.parentFile
+        val libDir = File(parentDir, "lib")
+        val currentPath = System.getProperty("java.library.path")
+        val newPath = listOf(libDir.path, parentDir.path, currentPath).joinToString(File.pathSeparator)
+        System.setProperty("java.library.path", newPath)
+    } catch (e: ClassNotFoundException) {
+        // We expect this error when running on the jvm
+    }
 
 
     val historyFile = try {

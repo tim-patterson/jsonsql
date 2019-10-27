@@ -21,7 +21,6 @@ object S3FileSystem: StreamFileSystem() {
         val s3Uri = URI.create(path)
         val authority = s3Uri.authority
         val prefix = s3Uri.path.trimStart('/')
-        val results = mutableListOf<Map<String, Any?>>()
 
         var listing = s3.listObjects(authority, prefix)
 
