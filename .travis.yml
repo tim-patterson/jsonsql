@@ -6,7 +6,7 @@ before_install:
   - wget https://github.com/sormuras/bach/raw/master/install-jdk.sh
 
 install:
-  - ./install-jdk.sh --url "https://github.com/oracle/graal/releases/download/vm-19.2.1/graalvm-ce-linux-amd64-19.2.1.tar.gz"
+  - ./install-jdk.sh --url "https://github.com/oracle/graal/releases/download/vm-19.2.1/graalvm-ce-darwin-amd64-19.2.1.tar.gz"
   - gu install native-image
   - ./gradlew assemble
 
