@@ -44,3 +44,4 @@ deploy:
   on:
     condition: $GRAAL_NATIVE == 'TRUE'
     repo: tim-patterson/jsonsql
+    tags: true
