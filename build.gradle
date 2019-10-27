@@ -16,7 +16,7 @@ buildscript {
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath 'com.github.jengelman.gradle.plugins:shadow:4.0.3'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:5.1.0'
         classpath 'org.junit.platform:junit-platform-gradle-plugin:1.0.0'
     }
 }
@@ -83,8 +83,10 @@ compileKotlin {
 }
 
 shadowJar {
-    archiveClassifier = null
-    archiveVersion = null
+    // The new attributes to configure this don't actually work.
+    // TODO try again when shadow > 5.1.0 is released
+    classifier = null
+    version = null
 }
 
 jar {
