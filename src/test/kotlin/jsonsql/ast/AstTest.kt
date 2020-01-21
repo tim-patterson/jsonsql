@@ -1,8 +1,5 @@
 package jsonsql.ast
 
-import org.jetbrains.spek.api.Spek
-import org.jetbrains.spek.api.dsl.describe
-import org.jetbrains.spek.api.dsl.it
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.*
 import org.junit.platform.runner.JUnitPlatform
@@ -11,9 +8,11 @@ import org.junit.runner.RunWith
 import jsonsql.ast.Ast.*
 import jsonsql.ast.Ast.Statement.*
 import jsonsql.ast.Ast.Expression.*
+import org.spekframework.spek2.Spek
+import org.spekframework.spek2.style.specification.describe
 
 @RunWith(JUnitPlatform::class)
-object AstSpec: Spek({
+object AstTest: Spek({
 
     describe("astParser") {
         it("simple select") {

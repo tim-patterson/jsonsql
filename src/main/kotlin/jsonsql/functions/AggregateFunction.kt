@@ -1,7 +1,5 @@
 package jsonsql.functions
 
-import com.github.prasanthj.hll.HyperLogLog
-
 abstract class AggregateFunctionExecutor {
     abstract fun processInput(args: List<Any?>)
     abstract fun getResult(): Any?
@@ -18,21 +16,6 @@ object CountFunction: Function.AggregateFunction() {
         override fun getResult() = count
     }
 }
-
-object CountDistinctFunction: Function.AggregateFunction() {
-    override fun validateParameterCount(count: Int) = count == 1
-    override fun executor() = object: AggregateFunctionExecutor() {
-        private var hll = HyperLogLog.HyperLogLogBuilder().build()
-        override fun processInput(args: List<Any?>) {
-            if (args.first() != null) {
-                hll.addString(StringInspector.inspect(args.first()))
-            }
-        }
-
-        override fun getResult() = hll.count()
-    }
-}
-
 
 object SumFunction: Function.AggregateFunction() {
     override fun validateParameterCount(count: Int) = count == 1

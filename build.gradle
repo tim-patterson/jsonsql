@@ -1,14 +1,17 @@
 buildscript {
-    ext.kotlin_version = '1.3.50'
-    ext.jline_version = '3.12.1'
-    ext.antlr_version = '4.7.2'
-    ext.aws_sdk_version = '1.11.648'
-    ext.spek_version = '1.1.5'
+    ext.kotlin_version = '1.3.61'
+    ext.jline_version = '3.13.3'
+    ext.antlr_version = '4.8-1'
+    ext.aws_sdk_version = '1.11.711'
+    ext.spek_version = '2.0.9'
     ext.hamcrest_version = '1.3'
-    ext.jackson_version = '2.10.0'
-    ext.kafka_version = '2.3.0'
-    ext.hll_version = '1.1'
-    ext.graalvm_version = '19.2.0'
+    ext.jackson_version = '2.10.2'
+    ext.kafka_version = '2.4.0'
+    ext.graalvm_version = '19.2.1'
+
+    ext.junit_platform_runner_version = '1.6.0'
+
+    ext.shadow_version = '5.2.0'
 
     repositories {
         mavenCentral()
@@ -16,8 +19,8 @@ buildscript {
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath 'com.github.jengelman.gradle.plugins:shadow:5.1.0'
-        classpath 'org.junit.platform:junit-platform-gradle-plugin:1.0.0'
+        classpath "com.github.jengelman.gradle.plugins:shadow:$shadow_version"
+        classpath "com.github.ben-manes:gradle-versions-plugin:0.27.0"
     }
 }
 
@@ -28,7 +31,7 @@ apply plugin: 'java'
 apply plugin: 'kotlin'
 apply plugin: 'antlr'
 apply plugin: 'com.github.johnrengelman.shadow'
-apply plugin: 'org.junit.platform.gradle.plugin'
+apply plugin: 'com.github.ben-manes.versions'
 
 sourceCompatibility = 1.8
 
@@ -43,50 +46,38 @@ configurations {
     }
 }
 
-junitPlatform {
-    filters {
-        engines {
-            include 'spek'
-        }
-    }
-}
-
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    compile "com.fasterxml.jackson.dataformat:jackson-dataformat-csv:$jackson_version"
-    compile "org.jline:jline-reader:$jline_version"
-    compile "org.jline:jline-terminal-jna:$jline_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-csv:$jackson_version"
+    implementation "org.jline:jline-reader:$jline_version"
+    implementation "org.jline:jline-terminal-jna:$jline_version"
     antlr "org.antlr:antlr4:$antlr_version"
-    compile "org.antlr:antlr4-runtime:$antlr_version"
-    compile "com.amazonaws:aws-java-sdk-s3:$aws_sdk_version"
-    compile "com.amazonaws:aws-java-sdk-sts:$aws_sdk_version"
-    compile "org.apache.kafka:kafka-clients:$kafka_version"
+    implementation "org.antlr:antlr4-runtime:$antlr_version"
+    implementation "com.amazonaws:aws-java-sdk-s3:$aws_sdk_version"
+    implementation "com.amazonaws:aws-java-sdk-sts:$aws_sdk_version"
+    implementation "org.apache.kafka:kafka-clients:$kafka_version"
     compileOnly "com.oracle.substratevm:svm:$graalvm_version"
-    compile ("com.github.prasanthj:hyperloglog:$hll_version") {
-        exclude group: "commons-cli"
-    }
 
-    testCompile ("org.jetbrains.spek:spek-api:$spek_version") {
-        exclude group: 'org.jetbrains.kotlin'
-    }
-    testRuntime ("org.jetbrains.spek:spek-junit-platform-engine:$spek_version") {
-        exclude group: 'org.junit.platform'
-        exclude group: 'org.jetbrains.kotlin'
-    }
-    testCompile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    testCompile "org.hamcrest:hamcrest-all:$hamcrest_version"
-    testCompile 'org.junit.platform:junit-platform-runner:1.0.0'
+    testImplementation "org.spekframework.spek2:spek-dsl-jvm:$spek_version"
+    testRuntimeOnly "org.spekframework.spek2:spek-runner-junit5:$spek_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    testImplementation "org.hamcrest:hamcrest-all:$hamcrest_version"
+    testImplementation "org.junit.platform:junit-platform-runner:$junit_platform_runner_version"
 }
 
 compileKotlin {
     dependsOn generateGrammarSource
+    kotlinOptions.jvmTarget = "1.8"
 }
 
-shadowJar {
-    // The new attributes to configure this don't actually work.
-    // TODO try again when shadow > 5.1.0 is released
-    classifier = null
-    version = null
+compileTestKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+
+test {
+    useJUnitPlatform {
+        includeEngines 'spek2'
+    }
 }
 
 jar {
@@ -95,9 +86,7 @@ jar {
     }
 }
 
-compileKotlin {
-    kotlinOptions.jvmTarget = "1.8"
-}
-compileTestKotlin {
-    kotlinOptions.jvmTarget = "1.8"
+shadowJar {
+    archiveClassifier = null
+    archiveVersion = ''
 }

@@ -1,19 +1,18 @@
 package jsonsql.functions
 
-import org.jetbrains.spek.api.Spek
-import org.jetbrains.spek.api.dsl.describe
-import org.jetbrains.spek.api.dsl.it
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.*
 import org.junit.platform.runner.JUnitPlatform
 import org.junit.runner.RunWith
 
+import org.spekframework.spek2.Spek
+import org.spekframework.spek2.style.specification.describe
 
 
 @RunWith(JUnitPlatform::class)
-object ScalarMathSpec: Spek({
+object ScalarMathTest: Spek({
     describe("scalar maths") {
-        action("add") {
+        describe("add") {
             it("adds two numbers") {
                 assertThat(AddFunction.execute(1.0, 2.0), equalTo(3.0))
             }
@@ -23,7 +22,7 @@ object ScalarMathSpec: Spek({
             }
         }
 
-        action("=") {
+        describe("=") {
             it("equals") {
                 assertThat(EqFunction.execute("abc", "abc"), equalTo(true))
             }
@@ -41,7 +40,7 @@ object ScalarMathSpec: Spek({
             }
         }
 
-        action("!=") {
+        describe("!=") {
             it("equals") {
                 assertThat(NEqFunction.execute("abc", "abc"), equalTo(false))
             }

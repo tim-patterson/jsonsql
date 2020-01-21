@@ -40,6 +40,5 @@ val functionRegistry = mapOf<String, Function>(
         "sum" to SumFunction,
         "min" to MinFunction,
         "max" to MaxFunction,
-        "max_row" to MaxRowFunction,
-        "count_distinct" to CountDistinctFunction
+        "max_row" to MaxRowFunction
 )

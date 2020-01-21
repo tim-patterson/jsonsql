@@ -7,7 +7,10 @@ import jsonsql.physical.PhysicalOperator
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.Token
 import org.graalvm.nativeimage.ProcessProperties
-import org.jline.reader.*
+import org.jline.reader.Highlighter
+import org.jline.reader.LineReader
+import org.jline.reader.LineReaderBuilder
+import org.jline.reader.UserInterruptException
 import org.jline.reader.impl.history.DefaultHistory
 import org.jline.terminal.Terminal
 import org.jline.terminal.TerminalBuilder
@@ -17,6 +20,7 @@ import org.jline.utils.AttributedStyle
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
+import java.util.regex.Pattern
 
 
 fun main(args: Array<String>) {
@@ -148,6 +152,10 @@ object SqlHighlighter: Highlighter {
         strBuilder.append(AttributedString(buffer, prevIdx, buffer.length))
         return strBuilder.toAttributedString()
     }
+
+    // Unused
+    override fun setErrorPattern(errorPattern: Pattern) {}
+    override fun setErrorIndex(errorIndex: Int) {}
 }
 
 private val tableStyle = AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN)
