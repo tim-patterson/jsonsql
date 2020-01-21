@@ -31,7 +31,7 @@ fun main(args: Array<String>) {
         val currentPath = System.getProperty("java.library.path")
         val newPath = listOf(libDir.path, parentDir.path, currentPath).joinToString(File.pathSeparator)
         System.setProperty("java.library.path", newPath)
-    } catch (e: ClassNotFoundException) {
+    } catch (e: NoClassDefFoundError) {
         // We expect this error when running on the jvm
     }
 
