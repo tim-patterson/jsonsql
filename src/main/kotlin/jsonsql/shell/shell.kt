@@ -67,7 +67,7 @@ fun main(args: Array<String>) {
 
     try {
         val currThread = Thread.currentThread()
-        terminal.handle(Terminal.Signal.INT, { currThread.interrupt() })
+        terminal.handle(Terminal.Signal.INT) { currThread.interrupt() }
         terminal.writer().println(AttributedString("JsonSQL", AttributedStyle.BOLD).toAnsi(terminal))
         while (true) {
             val line = lineReader.readLine("> ")
@@ -76,19 +76,17 @@ fun main(args: Array<String>) {
             if (line.contains(";")) {
                 val query = commandBuffer.joinToString("\n")
                 commandBuffer.clear()
-                var root: VectorizedPhysicalOperator? = null
                 try {
-                    val operatorTree = execute(query)
-                    root = operatorTree.root
-                    renderTable(terminal, root, operatorTree.streaming)
+                    execute(query).use { operatorTree ->
+                        val root = operatorTree.root
+                        renderTable(terminal, root, operatorTree.streaming)
+                    }
                 } catch (e: InterruptedException) {
                     terminal.writer().println(AttributedString("Query Cancelled", AttributedStyle.DEFAULT.foreground(AttributedStyle.RED)).toAnsi(terminal))
                 } catch (e: Exception) {
                     val stringWriter = StringWriter()
                     e.printStackTrace(PrintWriter(stringWriter))
                     terminal.writer().println(AttributedString(stringWriter.toString(), AttributedStyle.DEFAULT.foreground(AttributedStyle.RED)).toAnsi(terminal))
-                } finally {
-                    root?.close()
                 }
             }
         }
@@ -223,7 +221,7 @@ fun renderLine(line: List<String>, widths: List<Int>, style: AttributedStyle = A
     return AttributedString.join(AttributedString.EMPTY, listOf(vertical, center, vertical))
 }
 
-fun stringifyRow(row: Map<String, Any?>) = row.values.map(::stringifyCell)
+fun stringifyRow(row: List<Any?>) = row.map(::stringifyCell)
 
 fun stringifyCell(cell: Any?): String {
     cell ?: return "NULL"

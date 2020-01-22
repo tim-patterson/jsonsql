@@ -3,8 +3,9 @@ package jsonsql.physical.operators
 import jsonsql.ast.Ast
 import jsonsql.ast.Field
 import jsonsql.physical.*
+import org.apache.arrow.memory.BufferAllocator
 
-class GroupByOperator(val expressions: List<Ast.NamedExpr>, val groupByKeys: List<Ast.Expression>, val source: VectorizedPhysicalOperator, val tableAlias: String?): PhysicalOperator() {
+class GroupByOperator(allocator: BufferAllocator, val expressions: List<Ast.NamedExpr>, val groupByKeys: List<Ast.Expression>, val source: VectorizedPhysicalOperator, val tableAlias: String?): PhysicalOperator(allocator) {
     private lateinit var compiledGroupExpressions: List<ExpressionExecutor>
 
     override fun columnAliases() = expressions.map { Field(tableAlias, it.alias!!) }

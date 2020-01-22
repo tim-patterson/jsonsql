@@ -7,8 +7,9 @@ import jsonsql.physical.ExpressionExecutor
 import jsonsql.physical.PhysicalOperator
 import jsonsql.physical.VectorizedPhysicalOperator
 import jsonsql.physical.compileExpression
+import org.apache.arrow.memory.BufferAllocator
 
-class LateralViewOperator(val expression: Ast.NamedExpr, val source: VectorizedPhysicalOperator): PhysicalOperator() {
+class LateralViewOperator(allocator: BufferAllocator, val expression: Ast.NamedExpr, val source: VectorizedPhysicalOperator): PhysicalOperator(allocator) {
     private lateinit var compiledExpression: ExpressionExecutor
     private var shadowedFieldIdx: Int = -1
     private var subViewIter : Iterator<List<Any?>> = listOf<List<Any?>>().iterator()

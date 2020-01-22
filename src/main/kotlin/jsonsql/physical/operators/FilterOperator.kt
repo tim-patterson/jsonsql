@@ -6,8 +6,9 @@ import jsonsql.physical.ExpressionExecutor
 import jsonsql.physical.PhysicalOperator
 import jsonsql.physical.VectorizedPhysicalOperator
 import jsonsql.physical.compileExpression
+import org.apache.arrow.memory.BufferAllocator
 
-class FilterOperator(val predicate: Ast.Expression, val source: VectorizedPhysicalOperator): PhysicalOperator() {
+class FilterOperator(allocator: BufferAllocator, val predicate: Ast.Expression, val source: VectorizedPhysicalOperator): PhysicalOperator(allocator) {
     private lateinit var compiledExpression: ExpressionExecutor
 
     override fun columnAliases() = source.columnAliases()

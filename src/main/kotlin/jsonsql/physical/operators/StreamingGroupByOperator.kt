@@ -3,9 +3,11 @@ package jsonsql.physical.operators
 import jsonsql.ast.Ast
 import jsonsql.ast.Field
 import jsonsql.physical.*
+import org.apache.arrow.memory.BufferAllocator
 import java.util.concurrent.*
 
-class StreamingGroupByOperator(val expressions: List<Ast.NamedExpr>, val groupByKeys: List<Ast.Expression>, val source: VectorizedPhysicalOperator, val linger: Double, val tableAlias: String?): PhysicalOperator() {
+class StreamingGroupByOperator(allocator: BufferAllocator, val expressions: List<Ast.NamedExpr>, val groupByKeys: List<Ast.Expression>, val source: VectorizedPhysicalOperator, val linger: Double, val tableAlias: String?)
+    : PhysicalOperator(allocator) {
     private lateinit var compiledGroupExpressions: List<ExpressionExecutor>
     private val executor = Executors.newSingleThreadExecutor()
     private var currentFuture: Future<String?>? = null

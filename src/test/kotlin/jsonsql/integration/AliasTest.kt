@@ -29,6 +29,8 @@ object AliasTest: Spek({
 
     describe("Table Aliases") {
         it("basic") {
+            // TODO
+            // Is this something we should be supporting?(duplicate column aliases?)
             testQuery("select my_tbl.rownum, rownum from json 'test_data/nested.json' as my_tbl where my_tbl.rownum > 1 limit 3;", """
                 2.0 | 2.0
                 3.0 | 3.0

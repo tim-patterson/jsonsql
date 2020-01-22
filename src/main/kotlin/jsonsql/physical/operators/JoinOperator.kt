@@ -6,8 +6,9 @@ import jsonsql.physical.ExpressionExecutor
 import jsonsql.physical.PhysicalOperator
 import jsonsql.physical.VectorizedPhysicalOperator
 import jsonsql.physical.compileExpression
+import org.apache.arrow.memory.BufferAllocator
 
-class JoinOperator(val joinCondition: Ast.Expression, val source1: VectorizedPhysicalOperator, val source2: VectorizedPhysicalOperator): PhysicalOperator() {
+class JoinOperator(allocator: BufferAllocator, val joinCondition: Ast.Expression, val source1: VectorizedPhysicalOperator, val source2: VectorizedPhysicalOperator): PhysicalOperator(allocator) {
     private lateinit var compiledExpression: ExpressionExecutor
     private var smallTable: List<List<Any?>>? = null
     private var currIter: Iterator<List<Any?>> = listOf<List<Any?>>().iterator()

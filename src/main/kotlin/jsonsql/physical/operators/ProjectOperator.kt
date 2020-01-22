@@ -6,8 +6,9 @@ import jsonsql.physical.ExpressionExecutor
 import jsonsql.physical.PhysicalOperator
 import jsonsql.physical.VectorizedPhysicalOperator
 import jsonsql.physical.compileExpressions
+import org.apache.arrow.memory.BufferAllocator
 
-class ProjectOperator(val expressions: List<Ast.NamedExpr>, val source: VectorizedPhysicalOperator, val tableAlias: String?): PhysicalOperator() {
+class ProjectOperator(allocator: BufferAllocator, val expressions: List<Ast.NamedExpr>, val source: VectorizedPhysicalOperator, val tableAlias: String?): PhysicalOperator(allocator) {
     private lateinit var compiledExpressions: List<ExpressionExecutor>
 
     override fun columnAliases() = expressions.map { Field(tableAlias, it.alias!!) }

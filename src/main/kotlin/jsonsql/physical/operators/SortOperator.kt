@@ -5,8 +5,9 @@ import jsonsql.physical.ExpressionExecutor
 import jsonsql.physical.PhysicalOperator
 import jsonsql.physical.VectorizedPhysicalOperator
 import jsonsql.physical.compileExpression
+import org.apache.arrow.memory.BufferAllocator
 
-class SortOperator(val sortExpressions: List<Ast.OrderExpr>, val source: VectorizedPhysicalOperator): PhysicalOperator() {
+class SortOperator(allocator: BufferAllocator, val sortExpressions: List<Ast.OrderExpr>, val source: VectorizedPhysicalOperator): PhysicalOperator(allocator) {
     private var buffer = mutableListOf<List<Any?>>()
     private val sortedBufferItr: Iterator<List<Any?>> by lazy(::sort)
     private lateinit var compiledSortBy: List<CompiledOrderByExpr>

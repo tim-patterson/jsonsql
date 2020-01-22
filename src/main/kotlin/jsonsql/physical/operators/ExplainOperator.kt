@@ -3,8 +3,9 @@ package jsonsql.physical.operators
 import jsonsql.ast.Field
 import jsonsql.physical.PhysicalOperator
 import jsonsql.physical.VectorizedPhysicalOperator
+import org.apache.arrow.memory.BufferAllocator
 
-class ExplainOperator(val stmt: VectorizedPhysicalOperator): PhysicalOperator() {
+class ExplainOperator(allocator: BufferAllocator, val stmt: VectorizedPhysicalOperator): PhysicalOperator(allocator) {
     private lateinit var plan: Iterator<String>
 
     override fun columnAliases() = listOf(Field(null, "plan"))

@@ -5,9 +5,11 @@ import jsonsql.ast.Field
 import jsonsql.ast.TableType
 import jsonsql.fileformats.FileFormat
 import jsonsql.physical.PhysicalOperator
+import org.apache.arrow.memory.BufferAllocator
 
 
-class DescribeOperator(val table: Ast.Table, val tableOutput: Boolean): PhysicalOperator() {
+class DescribeOperator(allocator: BufferAllocator, val table: Ast.Table, val tableOutput: Boolean):
+        PhysicalOperator(allocator) {
     private val columns: Iterator<List<String>> by lazy(::scanTable)
 
     override fun columnAliases() = if(tableOutput) {

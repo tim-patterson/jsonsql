@@ -5,8 +5,9 @@ import jsonsql.ast.Field
 import jsonsql.fileformats.FileFormat
 import jsonsql.physical.PhysicalOperator
 import jsonsql.physical.VectorizedPhysicalOperator
+import org.apache.arrow.memory.BufferAllocator
 
-class WriteOperator(val table: Ast.Table, val source: VectorizedPhysicalOperator): PhysicalOperator() {
+class WriteOperator(allocator: BufferAllocator, val table: Ast.Table, val source: VectorizedPhysicalOperator): PhysicalOperator(allocator) {
     private val tableWriter = FileFormat.writer(table, source.columnAliases().map { it.fieldName })
     private var isDone = false
 

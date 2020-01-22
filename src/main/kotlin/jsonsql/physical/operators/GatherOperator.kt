@@ -2,9 +2,10 @@ package jsonsql.physical.operators
 
 import jsonsql.physical.PhysicalOperator
 import jsonsql.physical.VectorizedPhysicalOperator
+import org.apache.arrow.memory.BufferAllocator
 import java.util.concurrent.*
 
-class GatherOperator(val sources: List<VectorizedPhysicalOperator>, val allAtOnce: Boolean): PhysicalOperator() {
+class GatherOperator(allocator: BufferAllocator, val sources: List<VectorizedPhysicalOperator>, val allAtOnce: Boolean): PhysicalOperator(allocator) {
     private val queue: BlockingQueue<List<Any?>> by lazy (::runChildren)
     private lateinit var futures: List<Future<Unit>>
     private lateinit var executorPool: ExecutorService

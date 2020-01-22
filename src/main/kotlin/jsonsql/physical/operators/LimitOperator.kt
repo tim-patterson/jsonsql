@@ -2,8 +2,9 @@ package jsonsql.physical.operators
 
 import jsonsql.physical.PhysicalOperator
 import jsonsql.physical.VectorizedPhysicalOperator
+import org.apache.arrow.memory.BufferAllocator
 
-class LimitOperator(val limit: Int, val source: VectorizedPhysicalOperator): PhysicalOperator() {
+class LimitOperator(allocator: BufferAllocator, val limit: Int, val source: VectorizedPhysicalOperator): PhysicalOperator(allocator) {
     private var offset = 0
 
     override fun columnAliases() = source.columnAliases()
