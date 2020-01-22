@@ -1,8 +1,9 @@
 package jsonsql.physical.operators
 
 import jsonsql.physical.PhysicalOperator
+import jsonsql.physical.VectorizedPhysicalOperator
 
-class LimitOperator(val limit: Int, val source: PhysicalOperator): PhysicalOperator() {
+class LimitOperator(val limit: Int, val source: VectorizedPhysicalOperator): PhysicalOperator() {
     private var offset = 0
 
     override fun columnAliases() = source.columnAliases()
@@ -20,7 +21,5 @@ class LimitOperator(val limit: Int, val source: PhysicalOperator): PhysicalOpera
 
     override fun close() = source.close()
 
-    // For explain output
     override fun toString() = "Limit(${limit})"
-    override fun children() = listOf(source)
 }

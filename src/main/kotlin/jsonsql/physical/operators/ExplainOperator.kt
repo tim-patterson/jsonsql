@@ -2,8 +2,9 @@ package jsonsql.physical.operators
 
 import jsonsql.ast.Field
 import jsonsql.physical.PhysicalOperator
+import jsonsql.physical.VectorizedPhysicalOperator
 
-class ExplainOperator(val stmt: PhysicalOperator): PhysicalOperator() {
+class ExplainOperator(val stmt: VectorizedPhysicalOperator): PhysicalOperator() {
     private lateinit var plan: Iterator<String>
 
     override fun columnAliases() = listOf(Field(null, "plan"))
@@ -23,11 +24,12 @@ class ExplainOperator(val stmt: PhysicalOperator): PhysicalOperator() {
 
     override fun close() {} // Noop
 
-    private fun buildOutput(operator: PhysicalOperator,
+    private fun buildOutput(operator: VectorizedPhysicalOperator,
                             outputLines: MutableList<String> = mutableListOf(),
                             indent: Int = 0): MutableList<String> {
-        outputLines.add( (0 until indent).map { "  " }.joinToString("") + "$operator")
-        operator.children().forEach { buildOutput(it, outputLines, indent + 1) }
-        return outputLines
+        TODO()
+//        outputLines.add( (0 until indent).map { "  " }.joinToString("") + "$operator")
+//        operator.children().forEach { buildOutput(it, outputLines, indent + 1) }
+//        return outputLines
     }
 }

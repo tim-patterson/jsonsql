@@ -8,6 +8,7 @@ buildscript {
     ext.jackson_version = '2.10.2'
     ext.kafka_version = '2.4.0'
     ext.graalvm_version = '19.2.1'
+    ext.arrow_version = '0.15.1'
 
     ext.junit_platform_runner_version = '1.6.0'
 
@@ -56,6 +57,7 @@ dependencies {
     implementation "com.amazonaws:aws-java-sdk-s3:$aws_sdk_version"
     implementation "com.amazonaws:aws-java-sdk-sts:$aws_sdk_version"
     implementation "org.apache.kafka:kafka-clients:$kafka_version"
+    implementation "org.apache.arrow:arrow-vector:$arrow_version"
     compileOnly "com.oracle.substratevm:svm:$graalvm_version"
 
     testImplementation "org.spekframework.spek2:spek-dsl-jvm:$spek_version"

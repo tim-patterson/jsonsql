@@ -3,9 +3,10 @@ package jsonsql.physical.operators
 import jsonsql.ast.Ast
 import jsonsql.physical.ExpressionExecutor
 import jsonsql.physical.PhysicalOperator
+import jsonsql.physical.VectorizedPhysicalOperator
 import jsonsql.physical.compileExpression
 
-class SortOperator(val sortExpressions: List<Ast.OrderExpr>, val source: PhysicalOperator): PhysicalOperator() {
+class SortOperator(val sortExpressions: List<Ast.OrderExpr>, val source: VectorizedPhysicalOperator): PhysicalOperator() {
     private var buffer = mutableListOf<List<Any?>>()
     private val sortedBufferItr: Iterator<List<Any?>> by lazy(::sort)
     private lateinit var compiledSortBy: List<CompiledOrderByExpr>
@@ -52,9 +53,7 @@ class SortOperator(val sortExpressions: List<Ast.OrderExpr>, val source: Physica
         return buffer.iterator()
     }
 
-    // For explain output
     override fun toString() = "Sort($sortExpressions)"
-    override fun children() = listOf(source)
 }
 
 private data class CompiledOrderByExpr(val expression: ExpressionExecutor, val order: Int)

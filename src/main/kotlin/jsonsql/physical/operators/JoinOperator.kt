@@ -4,9 +4,10 @@ import jsonsql.ast.Ast
 import jsonsql.functions.BooleanInspector
 import jsonsql.physical.ExpressionExecutor
 import jsonsql.physical.PhysicalOperator
+import jsonsql.physical.VectorizedPhysicalOperator
 import jsonsql.physical.compileExpression
 
-class JoinOperator(val joinCondition: Ast.Expression, val source1: PhysicalOperator, val source2: PhysicalOperator): PhysicalOperator() {
+class JoinOperator(val joinCondition: Ast.Expression, val source1: VectorizedPhysicalOperator, val source2: VectorizedPhysicalOperator): PhysicalOperator() {
     private lateinit var compiledExpression: ExpressionExecutor
     private var smallTable: List<List<Any?>>? = null
     private var currIter: Iterator<List<Any?>> = listOf<List<Any?>>().iterator()
@@ -51,8 +52,6 @@ class JoinOperator(val joinCondition: Ast.Expression, val source1: PhysicalOpera
         }
     }
 
-    // For explain output
     override fun toString() = "Join(${joinCondition})"
-    override fun children() = listOf(source1, source2)
 }
 

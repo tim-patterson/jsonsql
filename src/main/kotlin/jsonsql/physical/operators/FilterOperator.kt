@@ -4,9 +4,10 @@ import jsonsql.ast.Ast
 import jsonsql.functions.BooleanInspector
 import jsonsql.physical.ExpressionExecutor
 import jsonsql.physical.PhysicalOperator
+import jsonsql.physical.VectorizedPhysicalOperator
 import jsonsql.physical.compileExpression
 
-class FilterOperator(val predicate: Ast.Expression, val source: PhysicalOperator): PhysicalOperator() {
+class FilterOperator(val predicate: Ast.Expression, val source: VectorizedPhysicalOperator): PhysicalOperator() {
     private lateinit var compiledExpression: ExpressionExecutor
 
     override fun columnAliases() = source.columnAliases()
@@ -31,8 +32,6 @@ class FilterOperator(val predicate: Ast.Expression, val source: PhysicalOperator
         source.close()
     }
 
-    // For explain output
     override fun toString() = "Filter(${predicate})"
-    override fun children() = listOf(source)
 }
 

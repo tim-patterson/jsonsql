@@ -4,9 +4,10 @@ import jsonsql.ast.Ast
 import jsonsql.ast.Field
 import jsonsql.physical.ExpressionExecutor
 import jsonsql.physical.PhysicalOperator
+import jsonsql.physical.VectorizedPhysicalOperator
 import jsonsql.physical.compileExpressions
 
-class ProjectOperator(val expressions: List<Ast.NamedExpr>, val source: PhysicalOperator, val tableAlias: String?): PhysicalOperator() {
+class ProjectOperator(val expressions: List<Ast.NamedExpr>, val source: VectorizedPhysicalOperator, val tableAlias: String?): PhysicalOperator() {
     private lateinit var compiledExpressions: List<ExpressionExecutor>
 
     override fun columnAliases() = expressions.map { Field(tableAlias, it.alias!!) }
@@ -28,8 +29,6 @@ class ProjectOperator(val expressions: List<Ast.NamedExpr>, val source: Physical
         source.close()
     }
 
-    // For explain output
     override fun toString() = "Select(${expressions})"
-    override fun children() = listOf(source)
 }
 

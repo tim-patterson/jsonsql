@@ -58,13 +58,13 @@ object BasicTest: Spek({
             """.trimIndent())
         }
 
-        it("select __all__") {
-            testQuery("select __all__ from json 'test_data/nested.json' limit 3;", """
-                {"rownum":1,"arrayval":["a1","a2","a3"],"structval":{"inner_key":"a"}}
-                {"rownum":2,"arrayval":["b1","b2","b3"],"structval":{"inner_key":"b"}}
-                {"rownum":3,"arrayval":["c1","c2","c3"],"structval":{"inner_key":"c"}}
-            """.trimIndent())
-        }
+//        it("select __all__") {
+//            testQuery("select __all__ from json 'test_data/nested.json' limit 3;", """
+//                {"rownum":1,"arrayval":["a1","a2","a3"],"structval":{"inner_key":"a"}}
+//                {"rownum":2,"arrayval":["b1","b2","b3"],"structval":{"inner_key":"b"}}
+//                {"rownum":3,"arrayval":["c1","c2","c3"],"structval":{"inner_key":"c"}}
+//            """.trimIndent())
+//        }
 
         it("select .nested") {
             testQuery("select rownum, structval.inner_key from json 'test_data/nested.json';", """

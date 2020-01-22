@@ -2,16 +2,13 @@ package jsonsql.integration
 
 import jsonsql.executor.execute
 import jsonsql.functions.StringInspector
+import jsonsql.physical.rowSequence
 import org.hamcrest.MatcherAssert
 import org.hamcrest.Matchers
 
 fun testQuery(expr: String, expected: String) {
-    val results = mutableListOf<List<Any?>>()
-    val operator = execute(expr).root
-    while (true) {
-        operator.next()?.let { results.add(it) } ?: break
+    execute(expr).root.use { operator ->
+        val results = operator.rowSequence().map { it.values }
+        MatcherAssert.assertThat(results.map { it.map { StringInspector.inspect(it) }.joinToString(" | ") }.joinToString("\n"), Matchers.equalTo(expected.trim()))
     }
-    operator.close()
-
-    MatcherAssert.assertThat(results.map { it.map { StringInspector.inspect(it) }.joinToString(" | ") }.joinToString("\n"), Matchers.equalTo(expected.trim()))
 }

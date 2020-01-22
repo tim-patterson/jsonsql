@@ -3,7 +3,8 @@ package jsonsql.shell
 import jsonsql.SqlLexer
 import jsonsql.executor.execute
 import jsonsql.functions.StringInspector
-import jsonsql.physical.PhysicalOperator
+import jsonsql.physical.VectorizedPhysicalOperator
+import jsonsql.physical.rowSequence
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.Token
 import org.graalvm.nativeimage.ProcessProperties
@@ -75,7 +76,7 @@ fun main(args: Array<String>) {
             if (line.contains(";")) {
                 val query = commandBuffer.joinToString("\n")
                 commandBuffer.clear()
-                var root: PhysicalOperator? = null
+                var root: VectorizedPhysicalOperator? = null
                 try {
                     val operatorTree = execute(query)
                     root = operatorTree.root
@@ -154,6 +155,7 @@ object SqlHighlighter: Highlighter {
     }
 
     // Unused
+
     override fun setErrorPattern(errorPattern: Pattern) {}
     override fun setErrorIndex(errorIndex: Int) {}
 }
@@ -161,8 +163,11 @@ object SqlHighlighter: Highlighter {
 private val tableStyle = AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN)
 private val headerStyle = AttributedStyle.BOLD.foreground(AttributedStyle.CYAN)
 
-
-fun renderTable(terminal: Terminal, operator: PhysicalOperator, streaming: Boolean) {
+/**
+ * TODO there will be cases where the schema changes, in this case we really should "reserve" slots for each field name
+ * as we come across them
+ */
+fun renderTable(terminal: Terminal, operator: VectorizedPhysicalOperator, streaming: Boolean) {
     val startTime = System.currentTimeMillis()
     // Get the first 1000 rows to get a good guess on column width etc
     val rowBuffer = mutableListOf<List<String>>()
@@ -172,12 +177,17 @@ fun renderTable(terminal: Terminal, operator: PhysicalOperator, streaming: Boole
 
     val bufferSize = if(streaming) 1 else 1000
 
+    val rowIter = operator.rowSequence().iterator()
+
     for (i in 0 until bufferSize) {
-        val row = operator.next()
-        row ?: break
-        val stringRow = stringifyRow(row)
-        rowBuffer.add(stringRow)
-        stringRow.mapIndexed { idx, cell -> maxWidths[idx] = maxOf(maxWidths[idx], cell.length) }
+        if (rowIter.hasNext()) {
+            val row = rowIter.next()
+            val stringRow = stringifyRow(row)
+            rowBuffer.add(stringRow)
+            stringRow.mapIndexed { idx, cell -> maxWidths[idx] = maxOf(maxWidths[idx], cell.length) }
+        } else {
+            break
+        }
     }
 
     // render header.
@@ -195,9 +205,7 @@ fun renderTable(terminal: Terminal, operator: PhysicalOperator, streaming: Boole
         rowCount++
     }
 
-    while (true) {
-        val row = operator.next()
-        row ?: break
+    rowIter.forEach { row ->
         terminal.writer().println(renderLine(stringifyRow(row), maxWidths).toAnsi(terminal))
         terminal.flush()
         rowCount++
@@ -215,7 +223,7 @@ fun renderLine(line: List<String>, widths: List<Int>, style: AttributedStyle = A
     return AttributedString.join(AttributedString.EMPTY, listOf(vertical, center, vertical))
 }
 
-fun stringifyRow(row: List<Any?>) = row.map(::stringifyCell)
+fun stringifyRow(row: Map<String, Any?>) = row.values.map(::stringifyCell)
 
 fun stringifyCell(cell: Any?): String {
     cell ?: return "NULL"

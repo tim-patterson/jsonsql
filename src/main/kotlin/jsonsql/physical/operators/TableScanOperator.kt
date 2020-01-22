@@ -27,6 +27,5 @@ class TableScanOperator(val table: Ast.Table, val fields: List<String>, val stre
 
     override fun close() = tableReader.close()
 
-    // For explain output
     override fun toString() = "TableScan(\"${table}\" columns=${fields})"
 }

@@ -4,7 +4,7 @@ import jsonsql.ast.Ast
 import jsonsql.ast.Field
 import jsonsql.physical.*
 
-class GroupByOperator(val expressions: List<Ast.NamedExpr>, val groupByKeys: List<Ast.Expression>, val source: PhysicalOperator, val tableAlias: String?): PhysicalOperator() {
+class GroupByOperator(val expressions: List<Ast.NamedExpr>, val groupByKeys: List<Ast.Expression>, val source: VectorizedPhysicalOperator, val tableAlias: String?): PhysicalOperator() {
     private lateinit var compiledGroupExpressions: List<ExpressionExecutor>
 
     override fun columnAliases() = expressions.map { Field(tableAlias, it.alias!!) }
@@ -62,8 +62,6 @@ class GroupByOperator(val expressions: List<Ast.NamedExpr>, val groupByKeys: Lis
         source.close()
     }
 
-    // For explain output
     override fun toString() = "GroupBy(${expressions}, groupby - ${groupByKeys})"
-    override fun children() = listOf(source)
 }
 

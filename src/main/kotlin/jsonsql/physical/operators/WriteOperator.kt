@@ -4,8 +4,9 @@ import jsonsql.ast.Ast
 import jsonsql.ast.Field
 import jsonsql.fileformats.FileFormat
 import jsonsql.physical.PhysicalOperator
+import jsonsql.physical.VectorizedPhysicalOperator
 
-class WriteOperator(val table: Ast.Table, val source: PhysicalOperator): PhysicalOperator() {
+class WriteOperator(val table: Ast.Table, val source: VectorizedPhysicalOperator): PhysicalOperator() {
     private val tableWriter = FileFormat.writer(table, source.columnAliases().map { it.fieldName })
     private var isDone = false
 
@@ -30,6 +31,5 @@ class WriteOperator(val table: Ast.Table, val source: PhysicalOperator): Physica
 
     override fun close() = tableWriter.close()
 
-    // For explain output
     override fun toString() = "Write(\"${table}\")"
 }

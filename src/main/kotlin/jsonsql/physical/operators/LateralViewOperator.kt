@@ -5,9 +5,10 @@ import jsonsql.ast.Field
 import jsonsql.functions.ArrayInspector
 import jsonsql.physical.ExpressionExecutor
 import jsonsql.physical.PhysicalOperator
+import jsonsql.physical.VectorizedPhysicalOperator
 import jsonsql.physical.compileExpression
 
-class LateralViewOperator(val expression: Ast.NamedExpr, val source: PhysicalOperator): PhysicalOperator() {
+class LateralViewOperator(val expression: Ast.NamedExpr, val source: VectorizedPhysicalOperator): PhysicalOperator() {
     private lateinit var compiledExpression: ExpressionExecutor
     private var shadowedFieldIdx: Int = -1
     private var subViewIter : Iterator<List<Any?>> = listOf<List<Any?>>().iterator()
@@ -44,8 +45,6 @@ class LateralViewOperator(val expression: Ast.NamedExpr, val source: PhysicalOpe
         source.close()
     }
 
-    // For explain output
     override fun toString() = "Project(${expression})"
-    override fun children() = listOf(source)
 }
 

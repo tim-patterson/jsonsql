@@ -1,9 +1,10 @@
 package jsonsql.physical.operators
 
 import jsonsql.physical.PhysicalOperator
+import jsonsql.physical.VectorizedPhysicalOperator
 import java.util.concurrent.*
 
-class GatherOperator(val sources: List<PhysicalOperator>, val allAtOnce: Boolean): PhysicalOperator() {
+class GatherOperator(val sources: List<VectorizedPhysicalOperator>, val allAtOnce: Boolean): PhysicalOperator() {
     private val queue: BlockingQueue<List<Any?>> by lazy (::runChildren)
     private lateinit var futures: List<Future<Unit>>
     private lateinit var executorPool: ExecutorService
@@ -58,9 +59,6 @@ class GatherOperator(val sources: List<PhysicalOperator>, val allAtOnce: Boolean
         return queue
     }
 
-
-    // For explain output
     override fun toString() = "Gather"
-    override fun children() = listOf(sources.first())
 }
 

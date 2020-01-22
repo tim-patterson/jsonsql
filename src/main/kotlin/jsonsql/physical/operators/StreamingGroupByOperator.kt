@@ -5,7 +5,7 @@ import jsonsql.ast.Field
 import jsonsql.physical.*
 import java.util.concurrent.*
 
-class StreamingGroupByOperator(val expressions: List<Ast.NamedExpr>, val groupByKeys: List<Ast.Expression>, val source: PhysicalOperator, val linger: Double, val tableAlias: String?): PhysicalOperator() {
+class StreamingGroupByOperator(val expressions: List<Ast.NamedExpr>, val groupByKeys: List<Ast.Expression>, val source: VectorizedPhysicalOperator, val linger: Double, val tableAlias: String?): PhysicalOperator() {
     private lateinit var compiledGroupExpressions: List<ExpressionExecutor>
     private val executor = Executors.newSingleThreadExecutor()
     private var currentFuture: Future<String?>? = null
@@ -70,8 +70,6 @@ class StreamingGroupByOperator(val expressions: List<Ast.NamedExpr>, val groupBy
         })
     }
 
-    // For explain output
     override fun toString() = "StreamingGroupBy(${expressions}, groupby - ${groupByKeys})"
-    override fun children() = listOf(source)
 }
 
