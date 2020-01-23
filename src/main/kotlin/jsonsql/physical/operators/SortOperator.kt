@@ -1,60 +1,36 @@
 package jsonsql.physical.operators
 
 import jsonsql.ast.Ast
-import jsonsql.physical.ExpressionExecutor
-import jsonsql.physical.PhysicalOperator
-import jsonsql.physical.compileExpression
+import jsonsql.ast.Field
+import jsonsql.physical.*
 
-class SortOperator(val sortExpressions: List<Ast.OrderExpr>, val source: PhysicalOperator): PhysicalOperator() {
-    private var buffer = mutableListOf<List<Any?>>()
-    private val sortedBufferItr: Iterator<List<Any?>> by lazy(::sort)
-    private lateinit var compiledSortBy: List<CompiledOrderByExpr>
+class SortOperator(
+        private val sortExpressions: List<Ast.OrderExpr>,
+        private val source: PhysicalOperator
+): PhysicalOperator() {
 
-    override fun columnAliases() = source.columnAliases()
+    override val columnAliases by lazy { source.columnAliases }
 
-    override fun compile() {
-        source.compile()
-        compiledSortBy = sortExpressions.map {
-            CompiledOrderByExpr(compileExpression(it.expression, source.columnAliases()), if (it.asc) 1 else -1)
-        }
-    }
-
-    override fun next(): List<Any?>? {
-        return if (sortedBufferItr.hasNext()) {
-            sortedBufferItr.next()
-        } else {
-            // Allow old buffer to be GC'd
-            buffer = mutableListOf()
-            null
-        }
-    }
-
-    override fun close() {
-        source.close()
-    }
-
-    private fun sort(): Iterator<List<Any?>> {
-        while (true) {
-            val row = source.next()
-            row ?: break
-            buffer.add(row)
+    override fun data(): ClosableSequence<Tuple> {
+        val compiledSortBy = sortExpressions.map {
+            CompiledOrderByExpr(compileExpression(it.expression, source.columnAliases), if (it.asc) 1 else -1)
         }
 
-        buffer.sortWith(Comparator{ row1, row2 ->
+        val sourceData = source.data()
+        return sourceData.sortedWith(Comparator { row1, row2 ->
             for (orderExpr in compiledSortBy) {
                 val expr = orderExpr.expression
                 val comparison = jsonsql.functions.compareValuesForSort(expr.evaluate(row1), expr.evaluate(row2))
                 if (comparison != 0) return@Comparator comparison * orderExpr.order
             }
             0
-        })
-
-        return buffer.iterator()
+        }).withClose {
+            sourceData.close()
+        }
     }
 
     // For explain output
     override fun toString() = "Sort($sortExpressions)"
-    override fun children() = listOf(source)
 }
 
 private data class CompiledOrderByExpr(val expression: ExpressionExecutor, val order: Int)

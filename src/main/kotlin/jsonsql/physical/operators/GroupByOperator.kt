@@ -4,66 +4,41 @@ import jsonsql.ast.Ast
 import jsonsql.ast.Field
 import jsonsql.physical.*
 
-class GroupByOperator(val expressions: List<Ast.NamedExpr>, val groupByKeys: List<Ast.Expression>, val source: PhysicalOperator, val tableAlias: String?): PhysicalOperator() {
-    private lateinit var compiledGroupExpressions: List<ExpressionExecutor>
+class GroupByOperator(
+        private val expressions: List<Ast.NamedExpr>,
+        private val groupByKeys: List<Ast.Expression>,
+        private val source: PhysicalOperator,
+        private val tableAlias: String?
+): PhysicalOperator() {
 
-    override fun columnAliases() = expressions.map { Field(tableAlias, it.alias!!) }
+    override val columnAliases = expressions.map { Field(tableAlias, it.alias!!) }
 
-    private var rowIter: Iterator<List<Any?>>? = null
+    override fun data(): ClosableSequence<Tuple> {
+        val compiledGroupExpressions = compileExpressions(groupByKeys, source.columnAliases)
 
-    override fun compile() {
-        source.compile()
-        compiledGroupExpressions = compileExpressions(groupByKeys, source.columnAliases())
-    }
+        val sourceData = source.data()
 
-    // We iterate until we hit the starting key(s) for the next group
-    // However as we've already consumed it we have to store it in
-    // an ivar for the next group
-    override fun next(): List<Any?>? {
-        if(rowIter != null) {
-            if (rowIter!!.hasNext()){
-                return rowIter!!.next()
-            } else {
-                return null
-            }
+        var aggregates = sourceData.groupingBy { row -> compiledGroupExpressions.map { it.evaluate(row) } }
+                .aggregate{ _, accumulator: List<AggregateExpressionExecutor>?, element, _ ->
+                    val exprs = accumulator ?: compileAggregateExpressions(expressions.map { it.expression }, source.columnAliases)
+                    exprs.map { it.processRow(element) }
+
+                    exprs
+                }
+        // Special case for select count(*) from ... where 1=2
+        // Ie we still want to return 0, not no rows.
+        if (groupByKeys.isEmpty() && aggregates.isEmpty()) {
+            aggregates = mapOf(listOf<Any?>() to compileAggregateExpressions(expressions.map { it.expression }, source.columnAliases))
         }
 
-        val aggs = mutableMapOf<String, List<AggregateExpressionExecutor>>()
-        while (true) {
-
-            val sourceRow = source.next()
-            if (sourceRow != null) {
-                val groupKeys = compiledGroupExpressions.map { it.evaluate(sourceRow) }
-                val groupStr = groupKeys.toString()
-
-                val exprs = aggs.computeIfAbsent(groupStr, {
-                    compileAggregateExpressions(expressions.map { it.expression }, source.columnAliases())
-                })
-                exprs.map { it.processRow(sourceRow) }
-            } else {
-                // In the case of no group by keys, ie select count() from foo
-                // we expect to get a count of 0 for zero rows, its not really
-                // consistent but that's sql for you
-                if (groupByKeys.isEmpty() && aggs.isEmpty()) {
-                    aggs[""] = compileAggregateExpressions(expressions.map { it.expression }, source.columnAliases())
-                }
-                rowIter = aggs.values.map { it.map { it.getResult() } }.iterator()
-
-                if (rowIter!!.hasNext()){
-                    return rowIter!!.next()
-                } else {
-                    return null
-                }
-            }
+        return aggregates.asSequence().map {(_, valuesExprs) ->
+            valuesExprs.map { it.getResult() }
+        }.withClose {
+            sourceData.close()
         }
-    }
-
-    override fun close() {
-        source.close()
     }
 
     // For explain output
     override fun toString() = "GroupBy(${expressions}, groupby - ${groupByKeys})"
-    override fun children() = listOf(source)
 }
 

@@ -1,58 +1,39 @@
 package jsonsql.physical.operators
 
 import jsonsql.ast.Ast
+import jsonsql.ast.Field
 import jsonsql.functions.BooleanInspector
-import jsonsql.physical.ExpressionExecutor
-import jsonsql.physical.PhysicalOperator
-import jsonsql.physical.compileExpression
+import jsonsql.physical.*
 
-class JoinOperator(val joinCondition: Ast.Expression, val source1: PhysicalOperator, val source2: PhysicalOperator): PhysicalOperator() {
-    private lateinit var compiledExpression: ExpressionExecutor
-    private var smallTable: List<List<Any?>>? = null
-    private var currIter: Iterator<List<Any?>> = listOf<List<Any?>>().iterator()
+class JoinOperator(
+        private val joinCondition: Ast.Expression,
+        private val left: PhysicalOperator,
+        private val right: PhysicalOperator
+): PhysicalOperator() {
 
-    override fun columnAliases() = source1.columnAliases() + source2.columnAliases()
+    override val columnAliases by lazy { left.columnAliases + right.columnAliases }
 
-    override fun compile() {
-        source1.compile()
-        source2.compile()
+    override fun data(): ClosableSequence<Tuple> {
+        val compiledExpression = compileExpression(joinCondition, left.columnAliases + right.columnAliases)
 
-        compiledExpression = compileExpression(joinCondition, columnAliases())
-    }
+        val leftData = left.data()
+        val rightData = right.data()
 
-    override fun next(): List<Any?>? {
-        if (smallTable == null) smallTable = loadSmallTable()
-        while (true) {
-            if (currIter.hasNext()) return currIter.next()
+        var smallTable: List<Tuple>? = rightData.toList()
 
-            val s1Row = source1.next() ?: return null
-            val nextRows = mutableListOf<List<Any?>>()
-            smallTable!!.forEach { s2Row ->
-                val row = s1Row + s2Row
-                if (BooleanInspector.inspect(compiledExpression.evaluate(row)) == true) {
-                    nextRows.add(row)
+        return leftData.flatMap { bigTableRow ->
+                    smallTable!!.asSequence().map { bigTableRow + it }
                 }
-            }
-            currIter = nextRows.iterator()
-        }
-    }
+                .filter { BooleanInspector.inspect(compiledExpression.evaluate(it)) == true }
+                .withClose {
+                    smallTable = null
+                    leftData.close()
+                    rightData.close()
+                }
 
-    override fun close() {
-        smallTable = null
-        source1.close()
-        source2.close()
-    }
-
-    private fun loadSmallTable(): List<List<Any?>> {
-        val rows = mutableListOf<List<Any?>>()
-        while (true) {
-            val row = source2.next() ?: return rows
-            rows.add(row)
-        }
     }
 
     // For explain output
     override fun toString() = "Join(${joinCondition})"
-    override fun children() = listOf(source1, source2)
 }
 
