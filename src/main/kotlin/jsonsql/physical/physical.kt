@@ -7,17 +7,59 @@ import jsonsql.logical.LogicalOperator
 import jsonsql.logical.LogicalTree
 import jsonsql.physical.operators.*
 
-abstract class PhysicalOperator: AutoCloseable {
-    abstract fun compile()
-    abstract fun columnAliases(): List<Field>
-    abstract fun next(): List<Any?>?
-    // Only used for the explain output
-    open fun children(): List<PhysicalOperator> = listOf()
+/**
+ * Interface used for streaming data out of operators, allows something like a limit to signal that its done with the
+ * sequence.
+ */
+interface ClosableSequence<out T>: Sequence<T>, AutoCloseable
+
+/**
+ * Wraps a sequence to turn it into a ClosableSequence, we also autoclose at the end of iteration, no attempt is made to
+ * prevent multiple close calls
+ */
+fun <T> Sequence<T>.withClose(onClose: ()->Unit = {}): ClosableSequence<T> {
+    return object: ClosableSequence<T> {
+        override fun iterator(): Iterator<T> = object: Iterator<T> {
+            private val iter = this@withClose.iterator()
+            override fun hasNext() = iter.hasNext().also { if (!it) onClose() }
+            override fun next(): T {
+                try {
+                    return iter.next()
+                } catch (e: NoSuchElementException) {
+                    onClose()
+                    throw e
+                }
+            }
+        }
+        override fun close() { onClose() }
+    }
+}
+
+// Represents a row of data flowing through.
+typealias Tuple = List<Any?>
+
+/**
+ * Main operator class. The lifecycle of this class is
+ * 1. creation
+ * 2. execution - Ie calling the data method.
+ * 3. cleanup - Cleaning up any resources left, this isn't done at the operator level but at the execution level
+ *
+ * Note the execution method may be called multiple times in parallel from different threads on the same operator
+ * instance
+ */
+abstract class PhysicalOperator {
+    // Should expose the column aliases that this operator exposes, used by downstream operators to compile their
+    // expressions
+    abstract val columnAliases: List<Field>
+
+    /**
+     * Called to start pulling data from this operator, should be called once done
+     */
+    abstract fun data(): ClosableSequence<Tuple>
 }
 
 fun physicalOperatorTree(operatorTree: LogicalTree): PhysicalTree {
     val root = physicalOperator(operatorTree.root, operatorTree.streaming)
-    root.compile()
     return PhysicalTree(root, operatorTree.streaming && root !is ExplainOperator)
 }
 

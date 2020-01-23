@@ -26,7 +26,6 @@ private object ExpressionValidator: LogicalVisitor<Unit>() {
 
     override fun visit(expression: Ast.Expression.Function, operator: LogicalOperator, context: Unit): Ast.Expression {
         val function = functionRegistry[expression.functionName] ?: error("function \"${expression.functionName}\" not found")
-        val sourceFields = operator.children.flatMap { it.fields() }
 
         if (operator !is LogicalOperator.GroupBy) {
             semanticAssert(function is Function.ScalarFunction, "function \"${expression.functionName}\" - aggregate functions not allowed here")

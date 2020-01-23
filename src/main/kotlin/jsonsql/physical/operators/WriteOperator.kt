@@ -3,32 +3,30 @@ package jsonsql.physical.operators
 import jsonsql.ast.Ast
 import jsonsql.ast.Field
 import jsonsql.fileformats.FileFormat
+import jsonsql.physical.ClosableSequence
 import jsonsql.physical.PhysicalOperator
+import jsonsql.physical.Tuple
+import jsonsql.physical.withClose
 
-class WriteOperator(val table: Ast.Table, val source: PhysicalOperator): PhysicalOperator() {
-    private val tableWriter = FileFormat.writer(table, source.columnAliases().map { it.fieldName })
-    private var isDone = false
+class WriteOperator(
+        private val table: Ast.Table,
+        private val source: PhysicalOperator
+): PhysicalOperator() {
 
-    override fun columnAliases() = listOf(Field(null, "Result"))
+    override val columnAliases = listOf(Field(null, "result"))
 
-    override fun compile() {
-        source.compile()
-    }
-
-    override fun next(): List<Any?>? {
-        if (isDone) return null
-
-        isDone = true
+    override fun data(): ClosableSequence<Tuple> {
+        val tableWriter = FileFormat.writer(table, source.columnAliases.map { it.fieldName })
         var rowCount = 0
-        while (true) {
-            val row = source.next()
-            row ?: return listOf("$rowCount rows written to \"${table.path}\"")
-            tableWriter.write(row)
-            rowCount++
+        source.data().use { sourceData ->
+            sourceData.forEach { row ->
+                tableWriter.write(row)
+                rowCount++
+            }
         }
+        tableWriter.close()
+        return sequenceOf(listOf("$rowCount rows written to \"${table.path}\"")).withClose()
     }
-
-    override fun close() = tableWriter.close()
 
     // For explain output
     override fun toString() = "Write(\"${table}\")"

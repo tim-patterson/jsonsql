@@ -4,28 +4,26 @@ import jsonsql.ast.Ast
 import jsonsql.ast.Field
 import jsonsql.ast.TableType
 import jsonsql.fileformats.FileFormat
+import jsonsql.physical.ClosableSequence
 import jsonsql.physical.PhysicalOperator
+import jsonsql.physical.Tuple
+import jsonsql.physical.withClose
 
 
-class DescribeOperator(val table: Ast.Table, val tableOutput: Boolean): PhysicalOperator() {
-    private val columns: Iterator<List<String>> by lazy(::scanTable)
+class DescribeOperator(
+        private val table: Ast.Table,
+        private val tableOutput: Boolean
+): PhysicalOperator() {
 
-    override fun columnAliases() = if(tableOutput) {
-        listOf("schema")
-    } else {
-        listOf("column_name", "column_type")
-    }.map { Field(null, it) }
+    override val columnAliases =
+        (if (tableOutput) listOf("table") else listOf("column_type", "column_name")).map { Field(null, it) }
 
-    override fun compile() {}
-
-    override fun next(): List<Any?>? {
-        if (!columns.hasNext()) return null
-        return columns.next()
+    override fun data(): ClosableSequence<Tuple> {
+        return scanTable().asSequence().withClose()
     }
 
-    override fun close() {} // Noop
+    private fun scanTable(): Sequence<Tuple> {
 
-    private fun scanTable(): Iterator<List<String>> {
         val cols = mutableMapOf<String, UsedTypes>()
 
         val tableReader = FileFormat.reader(table, true)
@@ -54,14 +52,14 @@ class DescribeOperator(val table: Ast.Table, val tableOutput: Boolean): Physical
                 "  ${it.key} ${it.value.tableString("  ").trimStart()}"
             }.joinToString(",\n")
 
-            listOf(listOf("""
+            """
 CREATE TABLE '${table.path}' (
 $rows
 )
-"""))
+""".splitToSequence("\n").map { listOf(it) }
         } else {
-            outRows.map { listOf(it.key, it.value.toString()) }
-        }.iterator()
+            outRows.map { listOf(it.key, it.value.toString()) }.asSequence()
+        }
     }
 
     private fun populateUsedTypes(usedTypes: UsedTypes, value: Any?) {
@@ -72,7 +70,7 @@ $rows
             is Map<*,*> -> {
                 usedTypes.couldBeStruct = true
                 value.forEach { (k, v) ->
-                    val u = usedTypes.structEntries.computeIfAbsent(k as String, { UsedTypes() })
+                    val u = usedTypes.structEntries.computeIfAbsent(k as String) { UsedTypes() }
                     populateUsedTypes(u, v)
                 }
             }
@@ -139,4 +137,6 @@ $rows
             }
         }
     }
+
+
 }

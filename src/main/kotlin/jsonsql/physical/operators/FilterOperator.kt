@@ -1,38 +1,30 @@
 package jsonsql.physical.operators
 
 import jsonsql.ast.Ast
+import jsonsql.ast.Field
 import jsonsql.functions.BooleanInspector
-import jsonsql.physical.ExpressionExecutor
-import jsonsql.physical.PhysicalOperator
-import jsonsql.physical.compileExpression
+import jsonsql.physical.*
 
-class FilterOperator(val predicate: Ast.Expression, val source: PhysicalOperator): PhysicalOperator() {
-    private lateinit var compiledExpression: ExpressionExecutor
+class FilterOperator(
+        private val predicate: Ast.Expression,
+        private val source: PhysicalOperator
+): PhysicalOperator() {
 
-    override fun columnAliases() = source.columnAliases()
+    override val columnAliases by lazy { source.columnAliases }
 
-    override fun compile() {
-        source.compile()
-
-        compiledExpression = compileExpression(predicate, columnAliases())
-    }
-
-    override fun next(): List<Any?>? {
-        while(true) {
-            val sourceRow = source.next()
-            sourceRow ?: return null
+    override fun data(): ClosableSequence<Tuple> {
+        val compiledExpression = compileExpression(predicate, source.columnAliases)
+        val sourceData = source.data()
+        return sourceData.filter { sourceRow ->
             val result = compiledExpression.evaluate(sourceRow)
 
-            if (BooleanInspector.inspect(result) == true) return sourceRow
+            BooleanInspector.inspect(result) == true
+        }.withClose {
+            sourceData.close()
         }
-    }
-
-    override fun close() {
-        source.close()
     }
 
     // For explain output
     override fun toString() = "Filter(${predicate})"
-    override fun children() = listOf(source)
 }
 

@@ -1,26 +1,24 @@
 package jsonsql.physical.operators
 
+import jsonsql.physical.ClosableSequence
 import jsonsql.physical.PhysicalOperator
+import jsonsql.physical.Tuple
+import jsonsql.physical.withClose
 
-class LimitOperator(val limit: Int, val source: PhysicalOperator): PhysicalOperator() {
-    private var offset = 0
+class LimitOperator(
+        private val limit: Int,
+        private val source: PhysicalOperator
+): PhysicalOperator() {
 
-    override fun columnAliases() = source.columnAliases()
+    override val columnAliases by lazy { source.columnAliases }
 
-    override fun compile() = source.compile()
-
-    override fun next(): List<Any?>? {
-        if (offset >= limit) {
-            source.close()
-            return null
+    override fun data(): ClosableSequence<Tuple> {
+        val sourceData = source.data()
+        return sourceData.take(limit).withClose {
+            sourceData.close()
         }
-        offset++
-        return source.next()
     }
-
-    override fun close() = source.close()
 
     // For explain output
     override fun toString() = "Limit(${limit})"
-    override fun children() = listOf(source)
 }

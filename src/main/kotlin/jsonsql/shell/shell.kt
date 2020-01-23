@@ -75,10 +75,9 @@ fun main(args: Array<String>) {
             if (line.contains(";")) {
                 val query = commandBuffer.joinToString("\n")
                 commandBuffer.clear()
-                var root: PhysicalOperator? = null
                 try {
                     val operatorTree = execute(query)
-                    root = operatorTree.root
+                    val root = operatorTree.root
                     renderTable(terminal, root, operatorTree.streaming)
                 } catch (e: InterruptedException) {
                     terminal.writer().println(AttributedString("Query Cancelled", AttributedStyle.DEFAULT.foreground(AttributedStyle.RED)).toAnsi(terminal))
@@ -86,8 +85,6 @@ fun main(args: Array<String>) {
                     val stringWriter = StringWriter()
                     e.printStackTrace(PrintWriter(stringWriter))
                     terminal.writer().println(AttributedString(stringWriter.toString(), AttributedStyle.DEFAULT.foreground(AttributedStyle.RED)).toAnsi(terminal))
-                } finally {
-                    root?.close()
                 }
             }
         }
@@ -166,45 +163,48 @@ fun renderTable(terminal: Terminal, operator: PhysicalOperator, streaming: Boole
     val startTime = System.currentTimeMillis()
     // Get the first 1000 rows to get a good guess on column width etc
     val rowBuffer = mutableListOf<List<String>>()
-    val maxWidths = operator.columnAliases().map{ it.fieldName.length }.toMutableList()
+    val maxWidths = operator.columnAliases.map{ it.fieldName.length }.toMutableList()
 
     var rowCount = 0
 
     val bufferSize = if(streaming) 1 else 1000
 
-    for (i in 0 until bufferSize) {
-        val row = operator.next()
-        row ?: break
-        val stringRow = stringifyRow(row)
-        rowBuffer.add(stringRow)
-        stringRow.mapIndexed { idx, cell -> maxWidths[idx] = maxOf(maxWidths[idx], cell.length) }
-    }
+    operator.data().use { data ->
+        val dataIter = data.iterator()
 
-    // render header.
-    val horizontalLine = AttributedString(
-            maxWidths.joinToString("+", prefix = "+", postfix = "+") { "-".repeat(it) },
-            tableStyle
-    ).toAnsi(terminal)
+        for (i in 0 until bufferSize) {
+            if (!dataIter.hasNext()) break
+            val row = dataIter.next()
+            val stringRow = stringifyRow(row)
+            rowBuffer.add(stringRow)
+            stringRow.mapIndexed { idx, cell -> maxWidths[idx] = maxOf(maxWidths[idx], cell.length) }
+        }
 
-    terminal.writer().println(horizontalLine)
-    terminal.writer().println(renderLine(operator.columnAliases().map { it.fieldName }, maxWidths, headerStyle).toAnsi(terminal))
-    terminal.writer().println(horizontalLine)
-    rowBuffer.forEach {
-        terminal.writer().println(renderLine(it, maxWidths).toAnsi(terminal))
-        terminal.flush()
-        rowCount++
-    }
+        // render header.
+        val horizontalLine = AttributedString(
+                maxWidths.joinToString("+", prefix = "+", postfix = "+") { "-".repeat(it) },
+                tableStyle
+        ).toAnsi(terminal)
 
-    while (true) {
-        val row = operator.next()
-        row ?: break
-        terminal.writer().println(renderLine(stringifyRow(row), maxWidths).toAnsi(terminal))
-        terminal.flush()
-        rowCount++
+        terminal.writer().println(horizontalLine)
+        terminal.writer().println(renderLine(operator.columnAliases.map { it.fieldName }, maxWidths, headerStyle).toAnsi(terminal))
+        terminal.writer().println(horizontalLine)
+        rowBuffer.forEach {
+            terminal.writer().println(renderLine(it, maxWidths).toAnsi(terminal))
+            terminal.flush()
+            rowCount++
+        }
+
+        while (dataIter.hasNext()) {
+            val row = dataIter.next()
+            terminal.writer().println(renderLine(stringifyRow(row), maxWidths).toAnsi(terminal))
+            terminal.flush()
+            rowCount++
+        }
+        terminal.writer().println(horizontalLine)
+        val totalTimeMs = System.currentTimeMillis() - startTime
+        terminal.writer().println(AttributedString("$rowCount rows returned in ${totalTimeMs / 1000.0} seconds", AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN)).toAnsi(terminal))
     }
-    terminal.writer().println(horizontalLine)
-    val totalTimeMs = System.currentTimeMillis() - startTime
-    terminal.writer().println(AttributedString("$rowCount rows returned in ${totalTimeMs/1000.0} seconds", AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN)).toAnsi(terminal))
 }
 
 fun renderLine(line: List<String>, widths: List<Int>, style: AttributedStyle = AttributedStyle.DEFAULT): AttributedString {
