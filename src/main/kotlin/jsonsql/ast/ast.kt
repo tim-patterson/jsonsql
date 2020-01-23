@@ -9,7 +9,7 @@ import org.antlr.v4.runtime.tree.TerminalNode
 sealed class Ast {
     sealed class Statement: Ast() {
         data class Explain(val select: Select): Statement()
-        data class Select(val expressions: List<NamedExpr>, val source: Source, val predicate: Expression?=null, val groupBy: List<Expression>?=null, val linger: Double, val orderBy: List<OrderExpr>?=null, val limit: Int?=null, val streaming: Boolean) : Statement()
+        data class Select(val expressions: List<NamedExpr>, val source: Source, val predicate: Expression?=null, val groupBy: List<Expression>?=null, val linger: Double, val orderBy: List<OrderExpr>?=null, val limit: Int?=null) : Statement()
         data class Describe(val tbl: Table, val tableOutput: Boolean) : Statement()
         data class Insert(val select: Select, val tbl: Table): Statement()
     }
@@ -85,8 +85,7 @@ private fun parseSelectStmt(select: SqlParser.Select_stmtContext): Ast.Statement
     val groupBy = select.group_by()?.let { it.expr().map(::parseExpression) }
     val linger = select.group_by()?.linger_expr()?.let { it.NUMERIC_LITERAL().text.toDouble() } ?: 0.0
     val orderBy = select.order_by()?.let { it.order_by_expr().map(::parseOrderByExpression)}
-    val streaming = select.STREAMING() != null
-    return Ast.Statement.Select(expressions, source, predicate, groupBy, linger, orderBy, limit, streaming)
+    return Ast.Statement.Select(expressions, source, predicate, groupBy, linger, orderBy, limit)
 }
 
 private fun parseSource(source: SqlParser.SourceContext): Ast.Source {

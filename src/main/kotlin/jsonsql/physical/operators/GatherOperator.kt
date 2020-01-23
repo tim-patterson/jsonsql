@@ -8,7 +8,7 @@ import java.util.concurrent.*
 
 class GatherOperator(
         private val sources: List<PhysicalOperator>,
-        private val allAtOnce: Boolean
+        private val allAtOnce: Boolean // Was used for streaming, the idea being that you don't want to queue waiting for non-terminating streams
 ): PhysicalOperator() {
 
     override val columnAliases by lazy { sources.first().columnAliases }

@@ -11,14 +11,13 @@ import jsonsql.physical.withClose
 class TableScanOperator(
         private val table: Ast.Table,
         private val fields: List<String>,
-        private val streaming: Boolean,
         private val tableAlias: String?
 ): PhysicalOperator() {
 
     override val columnAliases = fields.map { Field(tableAlias, it) }
 
     override fun data(): ClosableSequence<Tuple> {
-        val tableReader = FileFormat.reader(table, !streaming)
+        val tableReader = FileFormat.reader(table)
         return generateSequence { tableReader.next() }
                 .map { raw ->
                     columnAliases.map { field ->

@@ -20,7 +20,6 @@ object AstTest: Spek({
                     Select(
                             listOf(NamedExpr(Constant(1.0), null)),
                             Source.Table(Table(TableType.JSON,"dummy"), null),
-                            streaming = false,
                             linger = 0.0
                     ) as Statement
             ))

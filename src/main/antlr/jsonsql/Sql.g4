@@ -16,7 +16,7 @@ insert_stmt
   ;
 
 select_stmt
-  : STREAMING? SELECT named_expr ( ',' named_expr )* FROM source predicate? group_by? order_by? (LIMIT NUMERIC_LITERAL)?
+  : SELECT named_expr ( ',' named_expr )* FROM source predicate? group_by? order_by? (LIMIT NUMERIC_LITERAL)?
   ;
 
 named_expr
@@ -134,7 +134,6 @@ JOIN: J O I N;
 ON: O N;
 INSERT: I N S E R T;
 INTO: I N T O;
-STREAMING: S T R E A M I N G;
 LINGER: L I N G E R;
 TABLE: T A B L E;
 

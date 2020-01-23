@@ -59,45 +59,41 @@ abstract class PhysicalOperator {
 }
 
 fun physicalOperatorTree(operatorTree: LogicalTree): PhysicalTree {
-    val root = physicalOperator(operatorTree.root, operatorTree.streaming)
-    return PhysicalTree(root, operatorTree.streaming && root !is ExplainOperator)
+    val root = physicalOperator(operatorTree.root)
+    return PhysicalTree(root)
 }
 
-private fun physicalOperator(operator: LogicalOperator, streaming: Boolean, pathOverride: String? = null) : PhysicalOperator {
+private fun physicalOperator(operator: LogicalOperator, pathOverride: String? = null) : PhysicalOperator {
     return when(operator) {
-        is LogicalOperator.Limit -> LimitOperator(operator.limit, physicalOperator(operator.sourceOperator, streaming, pathOverride))
-        is LogicalOperator.Sort -> SortOperator(operator.sortExpressions, physicalOperator(operator.sourceOperator, streaming, pathOverride))
+        is LogicalOperator.Limit -> LimitOperator(operator.limit, physicalOperator(operator.sourceOperator, pathOverride))
+        is LogicalOperator.Sort -> SortOperator(operator.sortExpressions, physicalOperator(operator.sourceOperator, pathOverride))
         is LogicalOperator.Describe -> DescribeOperator(operator.tableDefinition, operator.tableOutput)
-        is LogicalOperator.DataSource -> TableScanOperator(pathOverride?.let { operator.tableDefinition.copy(path = it) } ?: operator.tableDefinition, operator.fields().map { it.fieldName }, streaming, operator.alias)
-        is LogicalOperator.Explain -> ExplainOperator(physicalOperator(operator.sourceOperator, streaming, pathOverride))
-        is LogicalOperator.Project -> ProjectOperator(operator.expressions, physicalOperator(operator.sourceOperator, streaming, pathOverride), operator.alias)
-        is LogicalOperator.Filter -> FilterOperator(operator.predicate, physicalOperator(operator.sourceOperator, streaming, pathOverride))
-        is LogicalOperator.LateralView -> LateralViewOperator(operator.expression, physicalOperator(operator.sourceOperator, streaming, pathOverride))
-        is LogicalOperator.Join -> JoinOperator(operator.onClause, physicalOperator(operator.sourceOperator1, streaming), physicalOperator(operator.sourceOperator2, streaming))
+        is LogicalOperator.DataSource -> TableScanOperator(pathOverride?.let { operator.tableDefinition.copy(path = it) } ?: operator.tableDefinition, operator.fields().map { it.fieldName }, operator.alias)
+        is LogicalOperator.Explain -> ExplainOperator(physicalOperator(operator.sourceOperator, pathOverride))
+        is LogicalOperator.Project -> ProjectOperator(operator.expressions, physicalOperator(operator.sourceOperator, pathOverride), operator.alias)
+        is LogicalOperator.Filter -> FilterOperator(operator.predicate, physicalOperator(operator.sourceOperator, pathOverride))
+        is LogicalOperator.LateralView -> LateralViewOperator(operator.expression, physicalOperator(operator.sourceOperator, pathOverride))
+        is LogicalOperator.Join -> JoinOperator(operator.onClause, physicalOperator(operator.sourceOperator1), physicalOperator(operator.sourceOperator2))
         is LogicalOperator.GroupBy -> {
-            var sourceOperator = physicalOperator(operator.sourceOperator, streaming, pathOverride)
-            if (streaming) {
-                StreamingGroupByOperator(operator.expressions, operator.groupByExpressions, sourceOperator, operator.linger, operator.alias)
-            } else {
-                GroupByOperator(operator.expressions, operator.groupByExpressions, sourceOperator, operator.alias)
-            }
+            var sourceOperator = physicalOperator(operator.sourceOperator, pathOverride)
+            GroupByOperator(operator.expressions, operator.groupByExpressions, sourceOperator, operator.alias)
         }
         is LogicalOperator.Gather -> {
             val tableSource = getTableSource(operator.sourceOperator)
             val files = FileSystem.listDir(tableSource.path)
             val sources = if (files.none()) {
-                listOf(physicalOperator(operator.sourceOperator, streaming))
+                listOf(physicalOperator(operator.sourceOperator))
             } else {
-                files.map { physicalOperator(operator.sourceOperator, streaming, it["path"] as String) }.toList()
+                files.map { physicalOperator(operator.sourceOperator, it["path"] as String) }.toList()
             }
 
-            GatherOperator(sources, streaming)
+            GatherOperator(sources, false)
         }
-        is LogicalOperator.Write -> WriteOperator(operator.tableDefinition, physicalOperator(operator.sourceOperator, streaming))
+        is LogicalOperator.Write -> WriteOperator(operator.tableDefinition, physicalOperator(operator.sourceOperator))
     }
 }
 
-data class PhysicalTree(val root: PhysicalOperator, val streaming: Boolean)
+data class PhysicalTree(val root: PhysicalOperator)
 
 private fun getTableSource(operator: LogicalOperator): Ast.Table {
     return when (operator) {

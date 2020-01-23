@@ -65,15 +65,15 @@ sealed class LogicalOperator(vararg val children: LogicalOperator) {
     }
 }
 
-data class LogicalTree(val root: LogicalOperator, val streaming: Boolean)
+data class LogicalTree(val root: LogicalOperator)
 
 
 fun logicalOperatorTree(stmt: Ast.Statement) : LogicalTree {
     var tree = when(stmt) {
-        is Ast.Statement.Describe -> LogicalTree(LogicalOperator.Describe(stmt.tbl, stmt.tableOutput), false)
-        is Ast.Statement.Select -> LogicalTree(fromSelect(stmt), stmt.streaming)
-        is Ast.Statement.Explain -> LogicalTree(LogicalOperator.Explain(fromSelect(stmt.select)), stmt.select.streaming)
-        is Ast.Statement.Insert -> LogicalTree(LogicalOperator.Write(stmt.tbl, fromSelect(stmt.select)), stmt.select.streaming)
+        is Ast.Statement.Describe -> LogicalTree(LogicalOperator.Describe(stmt.tbl, stmt.tableOutput))
+        is Ast.Statement.Select -> LogicalTree(fromSelect(stmt))
+        is Ast.Statement.Explain -> LogicalTree(LogicalOperator.Explain(fromSelect(stmt.select)))
+        is Ast.Statement.Insert -> LogicalTree(LogicalOperator.Write(stmt.tbl, fromSelect(stmt.select)))
     }
 
     tree = NormalizeIdentifiersVisitor.visit(tree, Unit)

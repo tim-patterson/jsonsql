@@ -32,7 +32,7 @@ object KafkaFileSystem: EventFileSystem() {
 
     }
 
-    override fun read(path: String, terminating: Boolean): EventReader {
+    override fun read(path: String): EventReader {
         val consumer = client(path)
         val topicPartitions = listDir(path).map {
             TopicPartition(it["topic"] as String, it["partition"] as Int)
@@ -56,7 +56,7 @@ object KafkaFileSystem: EventFileSystem() {
                         return records.next()
                     }
 
-                    if (terminating && endOffsets.all { (topicPartition, offset) -> consumer.position(topicPartition) >= offset }) {
+                    if (endOffsets.all { (topicPartition, offset) -> consumer.position(topicPartition) >= offset }) {
                         return null
                     }
 
