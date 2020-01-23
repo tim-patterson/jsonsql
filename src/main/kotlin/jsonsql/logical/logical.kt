@@ -48,7 +48,7 @@ sealed class LogicalOperator(vararg val children: LogicalOperator) {
         override fun fields() = listOf(Field(null, "plan"))
     }
 
-    data class GroupBy(val expressions: List<Ast.NamedExpr>, val groupByExpressions: List<Ast.Expression>, val linger: Double, val sourceOperator: LogicalOperator, override var alias: String? = null): LogicalOperator(sourceOperator) {
+    data class GroupBy(val expressions: List<Ast.NamedExpr>, val groupByExpressions: List<Ast.Expression>, val sourceOperator: LogicalOperator, override var alias: String? = null): LogicalOperator(sourceOperator) {
         override fun fields() = expressions.map { Field(alias, it.alias!!) }
     }
 
@@ -116,7 +116,7 @@ private fun fromSelect(node: Ast.Statement.Select): LogicalOperator {
     if (node.groupBy != null || node.expressions.map { checkForAggregate(it.expression) }.any { it } ) {
         val groupByKeys = node.groupBy ?: listOf()
 
-        operator = LogicalOperator.GroupBy(node.expressions, groupByKeys, node.linger, operator)
+        operator = LogicalOperator.GroupBy(node.expressions, groupByKeys, operator)
     } else {
         operator = LogicalOperator.Project(node.expressions, operator)
     }

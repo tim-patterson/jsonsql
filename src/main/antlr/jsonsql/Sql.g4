@@ -25,11 +25,7 @@ named_expr
   ;
 
 group_by
-  : GROUP BY expr ( ',' expr )* linger_expr?
-  ;
-
-linger_expr
-  : LINGER NUMERIC_LITERAL
+  : GROUP BY expr ( ',' expr )*
   ;
 
 order_by_expr
@@ -134,7 +130,6 @@ JOIN: J O I N;
 ON: O N;
 INSERT: I N S E R T;
 INTO: I N T O;
-LINGER: L I N G E R;
 TABLE: T A B L E;
 
 

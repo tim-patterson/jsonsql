@@ -9,7 +9,7 @@ import org.antlr.v4.runtime.tree.TerminalNode
 sealed class Ast {
     sealed class Statement: Ast() {
         data class Explain(val select: Select): Statement()
-        data class Select(val expressions: List<NamedExpr>, val source: Source, val predicate: Expression?=null, val groupBy: List<Expression>?=null, val linger: Double, val orderBy: List<OrderExpr>?=null, val limit: Int?=null) : Statement()
+        data class Select(val expressions: List<NamedExpr>, val source: Source, val predicate: Expression?=null, val groupBy: List<Expression>?=null, val orderBy: List<OrderExpr>?=null, val limit: Int?=null) : Statement()
         data class Describe(val tbl: Table, val tableOutput: Boolean) : Statement()
         data class Insert(val select: Select, val tbl: Table): Statement()
     }
@@ -83,9 +83,8 @@ private fun parseSelectStmt(select: SqlParser.Select_stmtContext): Ast.Statement
     val limit = select.NUMERIC_LITERAL()?.let { Integer.parseInt(it.text) }
     val predicate = select.predicate()?.let { parseExpression(select.predicate().expr()) }
     val groupBy = select.group_by()?.let { it.expr().map(::parseExpression) }
-    val linger = select.group_by()?.linger_expr()?.let { it.NUMERIC_LITERAL().text.toDouble() } ?: 0.0
     val orderBy = select.order_by()?.let { it.order_by_expr().map(::parseOrderByExpression)}
-    return Ast.Statement.Select(expressions, source, predicate, groupBy, linger, orderBy, limit)
+    return Ast.Statement.Select(expressions, source, predicate, groupBy, orderBy, limit)
 }
 
 private fun parseSource(source: SqlParser.SourceContext): Ast.Source {
