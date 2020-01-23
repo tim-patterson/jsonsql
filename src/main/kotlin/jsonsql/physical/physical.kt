@@ -105,6 +105,11 @@ fun physicalOperatorTree(allocator: BufferAllocator, operatorTree: LogicalTree):
     return PhysicalTree(allocator, root, operatorTree.streaming && root !is ExplainOperator)
 }
 
+// The path override here is all to support the gather functionality.
+// TODO Maybe there's a better way?, instead of creating many physical operators we could use the same one with some context
+// provided via the data method, with any operator state pushed into this closure, but then what about close....
+// Maybe the planning/wiring side of the operator could be decoupled from the running of the operator, this would make operators
+// reusable and contain less state but would mean it would be the data stream that needs to be closable, not the operator.
 private fun physicalOperator(allocator: BufferAllocator, operator: LogicalOperator, streaming: Boolean, pathOverride: String? = null) : VectorizedPhysicalOperator {
     return when(operator) {
         is LogicalOperator.Limit -> LimitOperator(allocator, operator.limit, physicalOperator(allocator, operator.sourceOperator, streaming, pathOverride))
