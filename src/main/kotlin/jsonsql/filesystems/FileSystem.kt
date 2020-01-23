@@ -56,7 +56,7 @@ abstract class StreamFileSystem: FileSystem() {
 }
 
 abstract class EventFileSystem: FileSystem() {
-    abstract fun read(path: String, terminating: Boolean = true): EventReader
+    abstract fun read(path: String): EventReader
     abstract fun write(path: String): EventWriter
 
     interface EventReader : AutoCloseable {

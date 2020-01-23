@@ -10,7 +10,7 @@ object DummyFileSystem: EventFileSystem() {
 
     }
 
-    override fun read(path: String, terminating: Boolean): EventReader {
+    override fun read(path: String): EventReader {
         var i = 0
         return object: EventReader {
             override fun next(): ByteArray? {

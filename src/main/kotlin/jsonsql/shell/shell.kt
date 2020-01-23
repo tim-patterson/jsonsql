@@ -78,7 +78,7 @@ fun main(args: Array<String>) {
                 try {
                     val operatorTree = execute(query)
                     val root = operatorTree.root
-                    renderTable(terminal, root, operatorTree.streaming)
+                    renderTable(terminal, root)
                 } catch (e: InterruptedException) {
                     terminal.writer().println(AttributedString("Query Cancelled", AttributedStyle.DEFAULT.foreground(AttributedStyle.RED)).toAnsi(terminal))
                 } catch (e: Exception) {
@@ -159,7 +159,7 @@ private val tableStyle = AttributedStyle.DEFAULT.foreground(AttributedStyle.GREE
 private val headerStyle = AttributedStyle.BOLD.foreground(AttributedStyle.CYAN)
 
 
-fun renderTable(terminal: Terminal, operator: PhysicalOperator, streaming: Boolean) {
+fun renderTable(terminal: Terminal, operator: PhysicalOperator) {
     val startTime = System.currentTimeMillis()
     // Get the first 1000 rows to get a good guess on column width etc
     val rowBuffer = mutableListOf<List<String>>()
@@ -167,7 +167,7 @@ fun renderTable(terminal: Terminal, operator: PhysicalOperator, streaming: Boole
 
     var rowCount = 0
 
-    val bufferSize = if(streaming) 1 else 1000
+    val bufferSize = 1000
 
     operator.data().use { data ->
         val dataIter = data.iterator()

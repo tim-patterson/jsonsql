@@ -3,7 +3,7 @@ package jsonsql.fileformats
 import jsonsql.filesystems.FileSystem
 
 object DirFormat: FileFormat {
-    override fun reader(fs: FileSystem, path: String, terminating: Boolean): FileFormat.Reader = DirReader(fs, path)
+    override fun reader(fs: FileSystem, path: String): FileFormat.Reader = DirReader(fs, path)
 
     override fun writer(fs: FileSystem, path: String, fields: List<String>): FileFormat.Writer = TODO()
 

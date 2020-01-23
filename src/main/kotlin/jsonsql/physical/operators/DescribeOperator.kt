@@ -26,7 +26,7 @@ class DescribeOperator(
 
         val cols = mutableMapOf<String, UsedTypes>()
 
-        val tableReader = FileFormat.reader(table, true)
+        val tableReader = FileFormat.reader(table)
 
         for (i in 0 until 2000) {
             val json = tableReader.next()
