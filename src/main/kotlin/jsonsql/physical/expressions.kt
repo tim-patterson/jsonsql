@@ -4,6 +4,19 @@ import jsonsql.ast.Field
 import jsonsql.functions.Function
 import jsonsql.functions.functionRegistry
 
+/**
+ * The idea behind these functions are to take expressions that are still represented by their ast nodes and turn them
+ * into something that can be evaluated.
+ * One of the optimisations we do in this step is to perform the index lookups once at this compile step instead of for
+ * ever tuple. Currently this compilation invoked by the operators.
+ *
+ * There are two versions of compiled expressions, those for group bys (many rows) -> 1 or those for normal scalar
+ * expressions(ie in the select, where and join-on clauses) which are 1-1.
+ *
+ * This gives (upstream) the operators some flexibility as to what order etc the want to order the fields in their tuples
+ * instead of baking all that logic into the tree builder and hence spreading logic around.
+ */
+
 // Scalar stuff
 fun compileExpressions(expressions: List<Ast.Expression>, columnAliases: List<Field>): List<ExpressionExecutor> {
     return expressions.map { expression -> compileExpression(expression, columnAliases)}
