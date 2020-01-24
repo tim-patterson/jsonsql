@@ -13,11 +13,11 @@ class JoinOperator(
 
     override val columnAliases by lazy { left.columnAliases + right.columnAliases }
 
-    override fun data(): ClosableSequence<Tuple> {
+    override fun data(context: ExecutionContext): ClosableSequence<Tuple> {
         val compiledExpression = compileExpression(joinCondition, left.columnAliases + right.columnAliases)
 
-        val leftData = left.data()
-        val rightData = right.data()
+        val leftData = left.data(context)
+        val rightData = right.data(context)
 
         var smallTable: List<Tuple>? = rightData.toList()
 

@@ -12,6 +12,15 @@ import jsonsql.physical.operators.*
 typealias Tuple = List<Any?>
 
 /**
+ * Context passed down for query execution, it could be used for passing down
+ * runtime config or as a method of collecting runtime stats etc
+ */
+data class ExecutionContext(
+        // Used to override paths in tablesource's for use with the gather operator
+        val pathOverrides: Map<String, String> = mapOf()
+)
+
+/**
  * Main operator class. The lifecycle of this class is
  * 1. creation
  * 2. execution - Ie calling the data method.
@@ -28,7 +37,7 @@ abstract class PhysicalOperator {
     /**
      * Called to start pulling data from this operator, should be called once done
      */
-    abstract fun data(): ClosableSequence<Tuple>
+    abstract fun data(context: ExecutionContext): ClosableSequence<Tuple>
 }
 
 fun physicalOperatorTree(operatorTree: LogicalTree): PhysicalTree {
@@ -36,37 +45,31 @@ fun physicalOperatorTree(operatorTree: LogicalTree): PhysicalTree {
     return PhysicalTree(root)
 }
 
-private fun physicalOperator(operator: LogicalOperator, pathOverride: String? = null) : PhysicalOperator {
+private fun physicalOperator(operator: LogicalOperator) : PhysicalOperator {
     return when(operator) {
-        is LogicalOperator.Limit -> LimitOperator(operator.limit, physicalOperator(operator.sourceOperator, pathOverride))
-        is LogicalOperator.Sort -> SortOperator(operator.sortExpressions, physicalOperator(operator.sourceOperator, pathOverride))
+        is LogicalOperator.Limit -> LimitOperator(operator.limit, physicalOperator(operator.sourceOperator))
+        is LogicalOperator.Sort -> SortOperator(operator.sortExpressions, physicalOperator(operator.sourceOperator))
         is LogicalOperator.Describe -> DescribeOperator(operator.tableDefinition, operator.tableOutput)
-        is LogicalOperator.DataSource -> TableScanOperator(pathOverride?.let { operator.tableDefinition.copy(path = it) } ?: operator.tableDefinition, operator.fields().map { it.fieldName }, operator.alias)
-        is LogicalOperator.Explain -> ExplainOperator(physicalOperator(operator.sourceOperator, pathOverride))
-        is LogicalOperator.Project -> ProjectOperator(operator.expressions, physicalOperator(operator.sourceOperator, pathOverride), operator.alias)
-        is LogicalOperator.Filter -> FilterOperator(operator.predicate, physicalOperator(operator.sourceOperator, pathOverride))
-        is LogicalOperator.LateralView -> LateralViewOperator(operator.expression, physicalOperator(operator.sourceOperator, pathOverride))
+        is LogicalOperator.DataSource -> TableScanOperator(operator.tableDefinition, operator.fields().map { it.fieldName }, operator.alias)
+        is LogicalOperator.Explain -> ExplainOperator(physicalOperator(operator.sourceOperator))
+        is LogicalOperator.Project -> ProjectOperator(operator.expressions, physicalOperator(operator.sourceOperator), operator.alias)
+        is LogicalOperator.Filter -> FilterOperator(operator.predicate, physicalOperator(operator.sourceOperator))
+        is LogicalOperator.LateralView -> LateralViewOperator(operator.expression, physicalOperator(operator.sourceOperator))
         is LogicalOperator.Join -> JoinOperator(operator.onClause, physicalOperator(operator.sourceOperator1), physicalOperator(operator.sourceOperator2))
-        is LogicalOperator.GroupBy -> {
-            var sourceOperator = physicalOperator(operator.sourceOperator, pathOverride)
-            GroupByOperator(operator.expressions, operator.groupByExpressions, sourceOperator, operator.alias)
-        }
+        is LogicalOperator.GroupBy -> GroupByOperator(operator.expressions, operator.groupByExpressions, physicalOperator(operator.sourceOperator), operator.alias)
+
         is LogicalOperator.Gather -> {
             val tableSource = getTableSource(operator.sourceOperator)
-            val files = FileSystem.listDir(tableSource.path)
-            val sources = if (files.none()) {
-                listOf(physicalOperator(operator.sourceOperator))
-            } else {
-                files.map { physicalOperator(operator.sourceOperator, it["path"] as String) }.toList()
-            }
-
-            GatherOperator(sources, false)
+            GatherOperator(physicalOperator(operator.sourceOperator), tableSource.path)
         }
         is LogicalOperator.Write -> WriteOperator(operator.tableDefinition, physicalOperator(operator.sourceOperator))
     }
 }
 
-data class PhysicalTree(val root: PhysicalOperator)
+data class PhysicalTree(private val root: PhysicalOperator) {
+    fun execute() = root.data(ExecutionContext())
+    val columnAliases by lazy { root.columnAliases }
+}
 
 private fun getTableSource(operator: LogicalOperator): Ast.Table {
     return when (operator) {

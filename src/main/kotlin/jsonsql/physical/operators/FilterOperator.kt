@@ -12,9 +12,9 @@ class FilterOperator(
 
     override val columnAliases by lazy { source.columnAliases }
 
-    override fun data(): ClosableSequence<Tuple> {
+    override fun data(context: ExecutionContext): ClosableSequence<Tuple> {
         val compiledExpression = compileExpression(predicate, source.columnAliases)
-        val sourceData = source.data()
+        val sourceData = source.data(context)
         return sourceData.filter { sourceRow ->
             val result = compiledExpression.evaluate(sourceRow)
 

@@ -15,10 +15,10 @@ class LateralViewOperator(
         source.columnAliases.filterNot { it.fieldName == expression.alias } + listOf(Field(null, expression.alias!!))
     }
 
-    override fun data(): ClosableSequence<Tuple> {
+    override fun data(context: ExecutionContext): ClosableSequence<Tuple> {
         val compiledExpression = compileExpression(expression.expression, source.columnAliases)
         val shadowedIndex = source.columnAliases.indexOfFirst { it.fieldName == expression.alias }
-        val sourceData = source.data()
+        val sourceData = source.data(context)
 
         val seq = sourceData.flatMap { parentRow ->
             val array = ArrayInspector.inspect(compiledExpression.evaluate(parentRow))

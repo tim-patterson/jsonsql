@@ -1,24 +1,35 @@
 package jsonsql.physical.operators
 
-import jsonsql.physical.ClosableSequence
-import jsonsql.physical.PhysicalOperator
-import jsonsql.physical.Tuple
-import jsonsql.physical.withClose
+import jsonsql.filesystems.FileSystem
+import jsonsql.physical.*
 import java.util.concurrent.*
 
+/**
+ * Operator that runs certain downstream operations in parallel when we're scanning directories
+ */
 class GatherOperator(
-        private val sources: List<PhysicalOperator>,
-        private val allAtOnce: Boolean // Was used for streaming, the idea being that you don't want to queue waiting for non-terminating streams
+        private val source: PhysicalOperator,
+        private val rootPath: String
 ): PhysicalOperator() {
 
-    override val columnAliases by lazy { sources.first().columnAliases }
+    override val columnAliases by lazy { source.columnAliases }
 
-    override fun data(): ClosableSequence<Tuple> {
+    override fun data(context: ExecutionContext): ClosableSequence<Tuple> {
+
+        val files = FileSystem.listDir(rootPath).toList()
+        // In the case where the file passed in is a singular file or a directory with a single file we'll just
+        // short this operator
+        if (files.size <= 1) {
+            return source.data(context)
+        }
 
         val queue = ArrayBlockingQueue<Tuple>(1024)
-        val executorPool = if (allAtOnce) Executors.newFixedThreadPool(sources.size) else Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2)
+        val executorPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2)
 
-        val dataSources = sources.map { it.data() }
+        val dataSources = files.map {
+            val subContext = context.copy(pathOverrides = context.pathOverrides + mapOf(rootPath to it["path"] as String))
+            source.data(subContext)
+        }
 
         fun close() {
             queue.clear()

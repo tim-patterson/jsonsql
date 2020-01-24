@@ -14,8 +14,8 @@ class ProjectOperator(
 
     private val compiledExpressions = compileExpressions(expressions.map(Ast.NamedExpr::expression), source.columnAliases)
 
-    override fun data(): ClosableSequence<Tuple> {
-        val sourceData = source.data()
+    override fun data(context: ExecutionContext): ClosableSequence<Tuple> {
+        val sourceData = source.data(context)
         return sourceData.map { row ->
             compiledExpressions.map { it.evaluate(row) }
         }.withClose {

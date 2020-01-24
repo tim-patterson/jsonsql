@@ -13,10 +13,10 @@ class GroupByOperator(
 
     override val columnAliases = expressions.map { Field(tableAlias, it.alias!!) }
 
-    override fun data(): ClosableSequence<Tuple> {
+    override fun data(context: ExecutionContext): ClosableSequence<Tuple> {
         val compiledGroupExpressions = compileExpressions(groupByKeys, source.columnAliases)
 
-        val sourceData = source.data()
+        val sourceData = source.data(context)
 
         var aggregates = sourceData.groupingBy { row -> compiledGroupExpressions.map { it.evaluate(row) } }
                 .aggregate{ _, accumulator: List<AggregateExpressionExecutor>?, element, _ ->
