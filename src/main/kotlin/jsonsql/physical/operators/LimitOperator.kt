@@ -1,9 +1,6 @@
 package jsonsql.physical.operators
 
-import jsonsql.physical.ClosableSequence
-import jsonsql.physical.PhysicalOperator
-import jsonsql.physical.Tuple
-import jsonsql.physical.withClose
+import jsonsql.physical.*
 
 class LimitOperator(
         private val limit: Int,
@@ -12,8 +9,8 @@ class LimitOperator(
 
     override val columnAliases by lazy { source.columnAliases }
 
-    override fun data(): ClosableSequence<Tuple> {
-        val sourceData = source.data()
+    override fun data(context: ExecutionContext): ClosableSequence<Tuple> {
+        val sourceData = source.data(context)
         return sourceData.take(limit).withClose {
             sourceData.close()
         }

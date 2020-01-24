@@ -1,9 +1,9 @@
 package jsonsql.shell
 
 import jsonsql.SqlLexer
-import jsonsql.executor.execute
+import jsonsql.executor.operatorTreeFromSql
 import jsonsql.functions.StringInspector
-import jsonsql.physical.PhysicalOperator
+import jsonsql.physical.PhysicalTree
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.Token
 import org.graalvm.nativeimage.ProcessProperties
@@ -76,9 +76,8 @@ fun main(args: Array<String>) {
                 val query = commandBuffer.joinToString("\n")
                 commandBuffer.clear()
                 try {
-                    val operatorTree = execute(query)
-                    val root = operatorTree.root
-                    renderTable(terminal, root)
+                    val operatorTree = operatorTreeFromSql(query)
+                    renderTable(terminal, operatorTree)
                 } catch (e: InterruptedException) {
                     terminal.writer().println(AttributedString("Query Cancelled", AttributedStyle.DEFAULT.foreground(AttributedStyle.RED)).toAnsi(terminal))
                 } catch (e: Exception) {
@@ -159,7 +158,7 @@ private val tableStyle = AttributedStyle.DEFAULT.foreground(AttributedStyle.GREE
 private val headerStyle = AttributedStyle.BOLD.foreground(AttributedStyle.CYAN)
 
 
-fun renderTable(terminal: Terminal, operator: PhysicalOperator) {
+fun renderTable(terminal: Terminal, operator: PhysicalTree) {
     val startTime = System.currentTimeMillis()
     // Get the first 1000 rows to get a good guess on column width etc
     val rowBuffer = mutableListOf<List<String>>()
@@ -169,7 +168,7 @@ fun renderTable(terminal: Terminal, operator: PhysicalOperator) {
 
     val bufferSize = 1000
 
-    operator.data().use { data ->
+    operator.execute().use { data ->
         val dataIter = data.iterator()
 
         for (i in 0 until bufferSize) {

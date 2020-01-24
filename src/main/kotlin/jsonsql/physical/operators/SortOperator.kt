@@ -11,12 +11,12 @@ class SortOperator(
 
     override val columnAliases by lazy { source.columnAliases }
 
-    override fun data(): ClosableSequence<Tuple> {
+    override fun data(context: ExecutionContext): ClosableSequence<Tuple> {
         val compiledSortBy = sortExpressions.map {
             CompiledOrderByExpr(compileExpression(it.expression, source.columnAliases), if (it.asc) 1 else -1)
         }
 
-        val sourceData = source.data()
+        val sourceData = source.data(context)
         return sourceData.sortedWith(Comparator { row1, row2 ->
             for (orderExpr in compiledSortBy) {
                 val expr = orderExpr.expression

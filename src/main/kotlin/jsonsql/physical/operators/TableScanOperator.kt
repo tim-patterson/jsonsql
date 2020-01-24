@@ -3,10 +3,7 @@ package jsonsql.physical.operators
 import jsonsql.ast.Ast
 import jsonsql.ast.Field
 import jsonsql.fileformats.FileFormat
-import jsonsql.physical.ClosableSequence
-import jsonsql.physical.PhysicalOperator
-import jsonsql.physical.Tuple
-import jsonsql.physical.withClose
+import jsonsql.physical.*
 
 class TableScanOperator(
         private val table: Ast.Table,
@@ -16,8 +13,10 @@ class TableScanOperator(
 
     override val columnAliases = fields.map { Field(tableAlias, it) }
 
-    override fun data(): ClosableSequence<Tuple> {
-        val tableReader = FileFormat.reader(table)
+    override fun data(context: ExecutionContext): ClosableSequence<Tuple> {
+        // Enable's support for the gather operator
+        val subTable = table.copy(path = context.pathOverrides.getOrDefault(table.path, table.path))
+        val tableReader = FileFormat.reader(subTable)
         return generateSequence { tableReader.next() }
                 .map { raw ->
                     columnAliases.map { field ->

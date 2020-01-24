@@ -6,7 +6,7 @@ import jsonsql.physical.PhysicalOperator
 import jsonsql.physical.PhysicalTree
 import jsonsql.physical.physicalOperatorTree
 
-fun execute(query: String): PhysicalTree {
+fun operatorTreeFromSql(query: String): PhysicalTree {
     val ast = parse(query)
     val logicalTree = logicalOperatorTree(ast)
     return physicalOperatorTree(logicalTree)

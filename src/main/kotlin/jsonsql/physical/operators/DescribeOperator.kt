@@ -4,10 +4,7 @@ import jsonsql.ast.Ast
 import jsonsql.ast.Field
 import jsonsql.ast.TableType
 import jsonsql.fileformats.FileFormat
-import jsonsql.physical.ClosableSequence
-import jsonsql.physical.PhysicalOperator
-import jsonsql.physical.Tuple
-import jsonsql.physical.withClose
+import jsonsql.physical.*
 
 
 class DescribeOperator(
@@ -18,7 +15,7 @@ class DescribeOperator(
     override val columnAliases =
         (if (tableOutput) listOf("table") else listOf("column_type", "column_name")).map { Field(null, it) }
 
-    override fun data(): ClosableSequence<Tuple> {
+    override fun data(context: ExecutionContext): ClosableSequence<Tuple> {
         return scanTable().asSequence().withClose()
     }
 

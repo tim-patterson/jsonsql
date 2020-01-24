@@ -42,6 +42,22 @@ object BasicTest: Spek({
             """.trimIndent())
         }
 
+        it("simple select files in dir") {
+            testQuery("select field1, field2 from csv 'test_data/directory' order by field1;", """
+                1 | quoted ,
+                2 | null
+                escaped , | foobar
+            """.trimIndent())
+        }
+
+        it("simple select files in dir trailing slash") {
+            testQuery("select field1, field2 from csv 'test_data/directory/' order by field1;", """
+                1 | quoted ,
+                2 | null
+                escaped , | foobar
+            """.trimIndent())
+        }
+
         it("simple select csv gzipped") {
             testQuery("select field1, field2 from csv 'test_data/simple.csv.gz';", """
                 1 | quoted ,

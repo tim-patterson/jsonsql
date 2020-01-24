@@ -1,10 +1,7 @@
 package jsonsql.physical.operators
 
 import jsonsql.ast.Field
-import jsonsql.physical.ClosableSequence
-import jsonsql.physical.PhysicalOperator
-import jsonsql.physical.Tuple
-import jsonsql.physical.withClose
+import jsonsql.physical.*
 
 class ExplainOperator(
         private val stmt: PhysicalOperator
@@ -12,7 +9,7 @@ class ExplainOperator(
 
     override val columnAliases = listOf(Field(null, "plan"))
 
-    override fun data(): ClosableSequence<Tuple> {
+    override fun data(context: ExecutionContext): ClosableSequence<Tuple> {
         return buildOutput(stmt).asSequence().map { listOf(it) }.withClose()
     }
 
