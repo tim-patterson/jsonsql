@@ -7,17 +7,17 @@ branches:
   except:
     - /^untagged/
 
+env:
+  - GRAAL_NATIVE='TRUE'
+  - GRAAL_NATIVE='FALSE'
+
 install:
-  - wget --output-document=jdk.tar.gz "https://github.com/oracle/graal/releases/download/vm-19.2.1/graalvm-ce-darwin-amd64-19.2.1.tar.gz"
+  - wget --output-document=jdk.tar.gz "https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-19.3.1/graalvm-ce-java11-darwin-amd64-19.3.1.tar.gz"
   - export JAVA_HOME=$HOME/graal
   - mkdir -p $JAVA_HOME
   - tar --extract --file jdk.tar.gz -C $JAVA_HOME --strip-components=3
   - export PATH=$JAVA_HOME/bin:$PATH
   - gu install native-image
-
-env:
-  - GRAAL_NATIVE='TRUE'
-  - GRAAL_NATIVE='FALSE'
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
