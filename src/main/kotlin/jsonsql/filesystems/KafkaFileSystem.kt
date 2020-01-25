@@ -3,6 +3,7 @@ package jsonsql.filesystems
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.TopicPartition
 import java.net.URI
+import java.time.Duration
 
 
 object KafkaFileSystem: EventFileSystem() {
@@ -60,7 +61,7 @@ object KafkaFileSystem: EventFileSystem() {
                         return null
                     }
 
-                    records = consumer.poll(500).iterator().asSequence().map {
+                    records = consumer.poll(Duration.ofMillis(500)).iterator().asSequence().map {
                         it.value()
                     }.iterator()
                 }
