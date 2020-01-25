@@ -1,12 +1,13 @@
 package jsonsql.shell
 
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.databind.ObjectMapper
 import jsonsql.SqlLexer
 import jsonsql.executor.operatorTreeFromSql
 import jsonsql.functions.StringInspector
 import jsonsql.physical.PhysicalTree
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.Token
-import org.graalvm.nativeimage.ProcessProperties
 import org.jline.reader.Highlighter
 import org.jline.reader.LineReader
 import org.jline.reader.LineReaderBuilder
@@ -21,22 +22,28 @@ import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.util.regex.Pattern
+import kotlin.system.exitProcess
 
 
 fun main(args: Array<String>) {
     // Disable stupid s3 partial stream warnings
     System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.NoOpLog")
 
-    // set java lib path for loading libsunec.
-    try {
-        val exeFile = File(ProcessProperties.getExecutableName()).absoluteFile
-        val parentDir = exeFile.parentFile
-        val libDir = File(parentDir, "lib")
-        val currentPath = System.getProperty("java.library.path")
-        val newPath = listOf(libDir.path, parentDir.path, currentPath).joinToString(File.pathSeparator)
-        System.setProperty("java.library.path", newPath)
-    } catch (e: NoClassDefFoundError) {
-        // We expect this error when running on the jvm
+    /**
+     * Hacky arg parsing here to support testing graal binaries
+     * TODO tidy up.
+     * -e for execute and j for json return
+     * the next arg is the sql to run
+     */
+    if (args.size >= 2 && args[0] == "-ej") {
+        val objectWriter = ObjectMapper().writer()
+        val query = args[1]
+        val tree = operatorTreeFromSql(query)
+        tree.execute().use { data ->
+            objectWriter.writeValue(System.out, data.toList())
+        }
+        println()
+        exitProcess(0)
     }
 
 
