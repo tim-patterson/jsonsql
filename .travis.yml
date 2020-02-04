@@ -34,16 +34,16 @@ script:
   - ./build.sh
 
 before_deploy:
-  - mkdir -p dist/lib
+  - mkdir -p dist
   - mv jsonsql dist/
-  - tar -czf jsonsql.tar.gz -C dist .
+  - tar -czf jsonsql.osx.tar.gz -C dist .
 
 deploy:
   provider: releases
   api_key:
     secure: Z2tdNp/mJAGDMPFSOuyB2NEZmKnXOuNJcXmWFXEDo88XmpTibPatQH2MmgEG7TC9w3Shijwrp2DFAeFvdmCRclJ1kl6rozx4tGffghVBQr7a7HgvKlmWEtvcgw8vPMM86/btNmKiiPNyoBnhu62noMYL2dFm/9jfTgReZNTGofUOl9NZ6RDGVvqPA/YApCrqjNOMT+GEIwwoBqZlGolkrjcZeNcyautCLANTA+XnLMF5h0vVZP2xNhte18lueokqqiKrTMdtuG08HgMbM9MlE72ZzO99Y0bTQBwJVMZWrU8xOM44RFVXcmg4x4GqLRBbIDNH093o22FZ34sEoH67tnrlRoM4EmSv5p3A8L+BzorY6dRpTWcVsHrQeEs+52hwZFjcQ2xgfSSFHjRhQptQMmel4ByhtDqFzC83aogF8GsBB4dK0T9+n4/KhbSlsR0rSh1JUjAEx/w/8KBEHYeGPolY94EeY5RQbzZooECYpxIuWfE2M8PmsRMlRDWcpSbLZLdbnqcrtlvjLr7i5IhlGI19z6eczwPmHaANzt1/hyL1WF8gEwjmBaOjles/Dz2jMf2uhA6CcyIv+Vb3vcYDI4Mg5RgWtIWYeJ2oEmMUtB9d2u1dLC4gySb3Lh4Evgkp19iLKMi4M8r5eOc5DWOfsjUHyQ3KxUDYZ0vIY/h0pSE=
   file:
-    - jsonsql.tar.gz
+    - jsonsql.osx.tar.gz
   skip_cleanup: true
   on:
     condition: $GRAAL_NATIVE == 'TRUE'
