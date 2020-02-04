@@ -1,5 +1,5 @@
-{"rownum":1, "arrayval": [ "a1", "a2", "a3" ], "structval": {"inner_key": "a"}}
-{"rownum":2, "arrayval": [ "b1", "b2", "b3" ], "structval": {"inner_key": "b"}}
-{"rownum":3, "arrayval": [ "c1", "c2", "c3" ], "structval": {"inner_key": "c"}}
-{"rownum":4, "arrayval": [ "d1", "d2", "d3" ], "structval": {"inner_key": "d"}}
-{"rownum":5, "arrayval": [ "e1", "e2", "e3" ], "structval": {"inner_key": "e"}}
+{"rownum":1, "arrayval": [ "a1", "a2", "a3" ], "structval": {"inner_key": "a"}, "floatval": 1.1}
+{"rownum":2, "arrayval": [ "b1", "b2", "b3" ], "structval": {"inner_key": "b"}, "floatval": 2.2}
+{"rownum":3, "arrayval": [ "c1", "c2", "c3" ], "structval": {"inner_key": "c"}, "floatval": 3.3}
+{"rownum":4, "arrayval": [ "d1", "d2", "d3" ], "structval": {"inner_key": "d"}, "floatval": 4.4}
+{"rownum":5, "arrayval": [ "e1", "e2", "e3" ], "structval": {"inner_key": "e"}, "floatval": 5.5}

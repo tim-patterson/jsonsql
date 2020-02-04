@@ -14,8 +14,22 @@ object BasicTest: Spek({
         it("describe") {
             testQuery("describe json 'test_data/nested.json';", """
                 arrayval | Array<String>
-                rownum | Number
+                floatval | Float
+                rownum | Int
                 structval | Struct<{inner_key=String}>
+            """.trimIndent())
+        }
+
+        it("describe as table") {
+            testQuery("describe json 'test_data/nested.json' as table;", """
+                CREATE TABLE 'test_data/nested.json' (
+                  arrayval ARRAY<STRING>,
+                  floatval NULL,
+                  rownum INTEGER,
+                  structval STRUCT<
+                    inner_key: STRING
+                  >
+                )
             """.trimIndent())
         }
 
@@ -70,15 +84,15 @@ object BasicTest: Spek({
             testQuery("select extension, count(), sum(size) from dir 'test_data' where parent='test_data' group by extension order by extension;", """
                 csv | 1.0 | 53.0
                 gz | 1.0 | 80.0
-                json | 5.0 | 2015.0
+                json | 5.0 | 2100.0
             """.trimIndent())
         }
 
         it("select __all__") {
             testQuery("select __all__ from json 'test_data/nested.json' limit 3;", """
-                {"rownum":1,"arrayval":["a1","a2","a3"],"structval":{"inner_key":"a"}}
-                {"rownum":2,"arrayval":["b1","b2","b3"],"structval":{"inner_key":"b"}}
-                {"rownum":3,"arrayval":["c1","c2","c3"],"structval":{"inner_key":"c"}}
+                {"rownum":1,"arrayval":["a1","a2","a3"],"structval":{"inner_key":"a"},"floatval":1.1}
+                {"rownum":2,"arrayval":["b1","b2","b3"],"structval":{"inner_key":"b"},"floatval":2.2}
+                {"rownum":3,"arrayval":["c1","c2","c3"],"structval":{"inner_key":"c"},"floatval":3.3}
             """.trimIndent())
         }
 

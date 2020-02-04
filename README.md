@@ -31,6 +31,13 @@ describe json 'test_data/nested.json';
 ```
 ![describe output](https://github.com/tim-patterson/jsonsql/raw/master/docs/describe.png)
 
+Often we're working with tools such as hive, presto, athena, spark etc where something shaped more like a create table statement is more useful to us,
+by appending `as table` on to the describe statement the output is rendered more like a create table statement
+```sql
+describe json 'test_data/nested.json' as table;
+```
+![describe table_output](https://github.com/tim-patterson/jsonsql/raw/master/docs/describe-table.png)
+
 ### Basic selects
 ```sql
 select rownum, arrayval, structval from json 'test_data/nested.json';
