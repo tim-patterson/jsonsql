@@ -37,6 +37,7 @@ before_deploy:
   - mkdir -p dist
   - mv jsonsql dist/
   - tar -czf jsonsql.osx.tar.gz -C dist .
+  - shasum -a 256 jsonsql.osx.tar.gz
 
 deploy:
   provider: releases
