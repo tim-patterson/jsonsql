@@ -107,6 +107,7 @@ task externalIntegrationTest(type: Test) {
     testLogging {
         events "failed"
         exceptionFormat "full"
+        showStandardStreams = true
     }
     outputs.upToDateWhen { false }
 }

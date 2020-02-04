@@ -13,7 +13,7 @@ fun testQuery(expr: String, expected: String) {
         // This is used to test against the binary produced by Graal as some things may not work in the native
         // image so it's good to check
         val bin = File("jsonsql").absoluteFile.path
-        val process = Runtime.getRuntime().exec(arrayOf(bin, "-ej", expr))
+        val process = ProcessBuilder().command(bin, "-ej", expr).redirectError(ProcessBuilder.Redirect.INHERIT).start()
         ObjectMapper().readValue(process.inputStream, List::class.java) as List<List<Any?>>
     }else {
         operatorTreeFromSql(expr).execute().use { data ->
