@@ -8,10 +8,10 @@ import org.apache.kafka.common.metrics.Metrics;
 import org.apache.kafka.common.metrics.MetricsReporter;
 import org.apache.kafka.common.record.CompressionType;
 import org.apache.kafka.common.utils.AppInfoParser;
+import org.apache.kafka.common.utils.PureJavaCrc32C;
 
 import java.util.List;
 import java.util.Map;
-import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
 // copy pasted from here
@@ -21,8 +21,9 @@ import java.util.zip.Checksum;
 final class Java9ChecksumFactory {
 
     @Substitute
+    // TODO why does the jdk crc not work :(
     public Checksum create() {
-        return new CRC32();
+        return new PureJavaCrc32C();
     }
 
 }
@@ -30,9 +31,6 @@ final class Java9ChecksumFactory {
 // Replace unsupported compression types
 @TargetClass(className = "org.apache.kafka.common.record.CompressionType")
 final class CompressionTypeSubs {
-
-    // @Alias @RecomputeFieldValue(kind = RecomputeFieldValue.Kind.FromAlias)
-    // public static CompressionType LZ4 = CompressionType.GZIP;
 
     @Alias @RecomputeFieldValue(kind = RecomputeFieldValue.Kind.FromAlias)
     public static CompressionType SNAPPY = CompressionType.GZIP;

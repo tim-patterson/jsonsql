@@ -11,7 +11,6 @@ env:
   - GRAAL_NATIVE='TRUE'
   - GRAAL_NATIVE='FALSE'
 
-# graal 19.3.1 seems to be very broken..., avoid
 install:
   - wget --output-document=jdk.tar.gz "https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-19.3.1/graalvm-ce-java11-darwin-amd64-19.3.1.tar.gz"
   - export JAVA_HOME=$HOME/graal
