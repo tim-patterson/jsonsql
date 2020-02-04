@@ -114,7 +114,7 @@ order by num_comments desc;
 
 ## Project Goals
 The main goals for this project are to be a lightweight standalone simple to use tool for adhoc querying of unstructured data using a
-syntax that's as close as possible to standard sql.
+syntax that's as close as possible to standard sql, while remaining simple and easily hackable.
 
 ## Alternatives
 The major alternative that provides querying of json data using sql without having to create table definitions etc is
