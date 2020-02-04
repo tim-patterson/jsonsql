@@ -36,7 +36,6 @@ script:
 before_deploy:
   - mkdir -p dist/lib
   - mv jsonsql dist/
-  - cp $JAVA_HOME/jre/lib/libsunec.dylib dist/lib/
   - tar -czf jsonsql.tar.gz -C dist .
 
 deploy:

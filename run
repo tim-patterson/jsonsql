@@ -1,2 +1,2 @@
 #!/bin/sh
-./gradlew shadowjar && java -Xmx1512m -jar build/libs/jsonsql.jar
+./gradlew shadowjar && java -Xmx1512m -jar build/libs/jsonsql.jar "$@"
