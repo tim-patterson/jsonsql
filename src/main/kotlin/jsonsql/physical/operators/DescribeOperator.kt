@@ -13,7 +13,7 @@ class DescribeOperator(
 ): PhysicalOperator() {
 
     override val columnAliases =
-        (if (tableOutput) listOf("table") else listOf("column_type", "column_name")).map { Field(null, it) }
+        (if (tableOutput) listOf("table") else listOf("column_name", "column_type")).map { Field(null, it) }
 
     override fun data(context: ExecutionContext): ClosableSequence<Tuple> {
         return scanTable().asSequence().withClose()
