@@ -49,11 +49,9 @@ class DescribeOperator(
                 "  ${it.key} ${it.value.tableString("  ").trimStart()}"
             }.joinToString(",\n")
 
-            """
-CREATE TABLE '${table.path}' (
+            """CREATE TABLE '${table.path}' (
 $rows
-)
-""".splitToSequence("\n").map { listOf(it) }
+)""".splitToSequence("\n").map { listOf(it) }
         } else {
             outRows.map { listOf(it.key, it.value.toString()) }.asSequence()
         }
@@ -62,7 +60,8 @@ $rows
     private fun populateUsedTypes(usedTypes: UsedTypes, value: Any?) {
         when(value) {
             is Boolean -> usedTypes.couldBeBoolean = true
-            is Number -> usedTypes.couldBeNumber = true
+            is Int, Long, Short, Byte -> if (!usedTypes.couldBeFloat) usedTypes.couldBeInt = true // Only set int if we're not already promoted to float
+            is Number -> { usedTypes.couldBeFloat = true; usedTypes.couldBeInt = false }
             is String -> usedTypes.couldBeString = true
             is Map<*,*> -> {
                 usedTypes.couldBeStruct = true
@@ -79,10 +78,11 @@ $rows
         }
     }
 
-
     // Class to keep track of what we see
     private data class UsedTypes(
-            var couldBeNumber: Boolean = false,
+            // Really for display purposes we wouldn't display union<int,float> we just promote the ints to floats
+            var couldBeInt: Boolean = false,
+            var couldBeFloat: Boolean = false,
             var couldBeString: Boolean = false,
             var couldBeBoolean: Boolean = false,
             var couldBeStruct: Boolean = false,
@@ -92,7 +92,8 @@ $rows
     ) {
         override fun toString(): String {
             val descriptions = mutableListOf<String>()
-            if (couldBeNumber) descriptions.add("Number")
+            if (couldBeFloat) descriptions.add("Float")
+            if (couldBeInt) descriptions.add("Int")
             if (couldBeString) descriptions.add("String")
             if (couldBeBoolean) descriptions.add("Boolean")
             if (couldBeArray) descriptions.add("Array<${arrayEntries!!}>")
@@ -101,7 +102,7 @@ $rows
         }
 
         fun tableString(baseIndent: String): String {
-            val types = listOf(couldBeNumber, couldBeString, couldBeBoolean, couldBeArray, couldBeStruct).filter { it }
+            val types = listOf(couldBeInt, couldBeString, couldBeBoolean, couldBeArray, couldBeStruct).filter { it }
             if(types.isEmpty()) return "${baseIndent}NULL"
 
             val union = types.size > 1
@@ -110,7 +111,8 @@ $rows
             val indent = if(union) "$baseIndent  " else baseIndent
 
 
-            if (couldBeNumber) unionItems.add("${indent}NUMBER")
+            if (couldBeFloat) unionItems.add("${indent}FLOAT")
+            if (couldBeInt) unionItems.add("${indent}INTEGER")
             if (couldBeString) unionItems.add("${indent}STRING")
             if (couldBeBoolean) unionItems.add("${indent}BOOLEAN")
             if (couldBeArray) {
