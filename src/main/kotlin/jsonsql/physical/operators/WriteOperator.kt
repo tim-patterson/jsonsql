@@ -13,16 +13,18 @@ class WriteOperator(
     override val columnAliases = listOf(Field(null, "result"))
 
     override fun data(context: ExecutionContext): ClosableSequence<Tuple> {
-        val tableWriter = FileFormat.writer(table, source.columnAliases.map { it.fieldName })
-        var rowCount = 0
-        source.data(context).use { sourceData ->
-            sourceData.forEach { row ->
-                tableWriter.write(row)
-                rowCount++
+        return lazySeq {
+            var rowCount = 0
+            FileFormat.writer(table, source.columnAliases.map { it.fieldName }).use { tableWriter ->
+                source.data(context).use { sourceData ->
+                    sourceData.forEach { row ->
+                        tableWriter.write(row)
+                        rowCount++
+                    }
+                }
             }
-        }
-        tableWriter.close()
-        return sequenceOf(listOf("$rowCount rows written to \"${table.path}\"")).withClose()
+            sequenceOf(listOf("$rowCount rows written to \"${table.path}\""))
+        }.withClose()
     }
 
     // For explain output

@@ -27,16 +27,12 @@ class GatherOperator(
             queue.clear()
             dataSources.forEach { it.close() }
         }
-
-        // Due to alot of the work being done here outside of the returned sequence itself we need to be able to catch
-        // any exceptions(Ie ctrl-c ) and clean up after ourselves.
-        try {
-
+        return lazySeq {
             val files = FileSystem.listDir(rootPath).toList()
             // In the case where the file passed in is a singular file or a directory with a single file we'll just
             // short this operator
             if (files.size <= 1) {
-                return source.data(context)
+                return@lazySeq source.data(context)
             }
 
             dataSources = files.map {
@@ -55,7 +51,7 @@ class GatherOperator(
 
             val futures = tasks.map { executorPool.submit(it) }
 
-            return generateSequence {
+            generateSequence {
                 var row: Tuple?
                 while (true) {
                     row = queue.poll(10, TimeUnit.MILLISECONDS)
@@ -71,11 +67,8 @@ class GatherOperator(
                     }
                 }
                 row
-            }.withClose { close() }
-        } catch (e: Exception) {
-            close()
-            throw e
-        }
+            }
+        }.withClose { close() }
     }
 
     // For explain output

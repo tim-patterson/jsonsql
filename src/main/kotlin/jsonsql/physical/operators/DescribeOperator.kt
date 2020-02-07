@@ -16,7 +16,7 @@ class DescribeOperator(
         (if (tableOutput) listOf("table") else listOf("column_name", "column_type")).map { Field(null, it) }
 
     override fun data(context: ExecutionContext): ClosableSequence<Tuple> {
-        return scanTable().withClose()
+        return lazySeq { scanTable() }.withClose()
     }
 
     private fun scanTable(): Sequence<Tuple> {

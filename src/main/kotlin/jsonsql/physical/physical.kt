@@ -36,8 +36,8 @@ abstract class PhysicalOperator {
 
     /**
      * Called to start pulling data from this operator.
-     * As the close is called on the result of this, any real work should happen inside the sequence object after the
-     * return of this method, this is to support proper cleanup on query cancellation etc
+     * As the close is called on the result of this, any real work shouldn't happen at least until the .iterator
+     * method of the returned sequence is called, using the lazySeq helper can help with this
      */
     abstract fun data(context: ExecutionContext): ClosableSequence<Tuple>
 }

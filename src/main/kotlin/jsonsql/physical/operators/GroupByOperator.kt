@@ -18,9 +18,7 @@ class GroupByOperator(
         val compiledGroupExpressions = compileExpressions(groupByKeys, source.columnAliases)
 
         val sourceData = source.data(context)
-
-        // Due to the .aggregate not being lazy we need to wrap this whole thing in a try catch.
-        try {
+        return lazySeq {
             var aggregates = sourceData.groupingBy { row -> compiledGroupExpressions.map { it.evaluate(row) } }
                     .aggregate { _, accumulator: List<AggregateExpressionExecutor>?, element, _ ->
                         val exprs = accumulator
@@ -35,14 +33,11 @@ class GroupByOperator(
                 aggregates = mapOf(listOf<Any?>() to compileAggregateExpressions(expressions.map { it.expression }, source.columnAliases))
             }
 
-            return aggregates.asSequence().map { (_, valuesExprs) ->
+            aggregates.asSequence().map { (_, valuesExprs) ->
                 valuesExprs.map { it.getResult() }
-            }.withClose {
-                sourceData.close()
             }
-        } catch (e: Exception) {
-            sourceData.close()
-            throw e
+        }.withClose {
+                sourceData.close()
         }
     }
 

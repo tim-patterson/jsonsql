@@ -17,16 +17,17 @@ class JoinOperator(
         val compiledExpression = compileExpression(joinCondition, left.columnAliases + right.columnAliases)
 
         val leftData = left.data(context)
-        var smallTable: List<Tuple>? = right.data(context).use { rightData -> rightData.toList() }
+        var smallTable: List<Tuple>?
+        return lazySeq {
+            smallTable = right.data(context).use { rightData -> rightData.toList() }
 
-        return leftData.flatMap { bigTableRow ->
-                    smallTable!!.asSequence().map { bigTableRow + it }
-                }
-                .filter { BooleanInspector.inspect(compiledExpression.evaluate(it)) == true }
-                .withClose {
-                    smallTable = null // Free up heap
-                    leftData.close()
-                }
+            leftData.flatMap { bigTableRow ->
+                smallTable!!.asSequence().map { bigTableRow + it }
+            }.filter { BooleanInspector.inspect(compiledExpression.evaluate(it)) == true }
+        }.withClose {
+            smallTable = null // Free up heap
+            leftData.close()
+        }
 
     }
 
