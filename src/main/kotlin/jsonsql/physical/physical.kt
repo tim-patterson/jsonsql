@@ -35,7 +35,9 @@ abstract class PhysicalOperator {
     abstract val columnAliases: List<Field>
 
     /**
-     * Called to start pulling data from this operator, should be called once done
+     * Called to start pulling data from this operator.
+     * As the close is called on the result of this, any real work should happen inside the sequence object after the
+     * return of this method, this is to support proper cleanup on query cancellation etc
      */
     abstract fun data(context: ExecutionContext): ClosableSequence<Tuple>
 }

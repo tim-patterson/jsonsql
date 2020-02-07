@@ -16,24 +16,23 @@ class DescribeOperator(
         (if (tableOutput) listOf("table") else listOf("column_name", "column_type")).map { Field(null, it) }
 
     override fun data(context: ExecutionContext): ClosableSequence<Tuple> {
-        return scanTable().asSequence().withClose()
+        return scanTable().withClose()
     }
 
     private fun scanTable(): Sequence<Tuple> {
 
         val cols = mutableMapOf<String, UsedTypes>()
 
-        val tableReader = FileFormat.reader(table)
-
-        for (i in 0 until 2000) {
-            val json = tableReader.next()
-            json ?: break
-            json.forEach { (key, value) ->
-                val usedTypes = cols.computeIfAbsent(key) { UsedTypes() }
-                populateUsedTypes(usedTypes, value)
+        FileFormat.reader(table).use { tableReader ->
+            for (i in 0 until 2000) {
+                val json = tableReader.next()
+                json ?: break
+                json.forEach { (key, value) ->
+                    val usedTypes = cols.computeIfAbsent(key) { UsedTypes() }
+                    populateUsedTypes(usedTypes, value)
+                }
             }
         }
-        tableReader.close()
 
         val outRows = if (table.type == TableType.JSON) {
             cols.toSortedMap()

@@ -23,13 +23,11 @@ interface FileFormat {
             }
     }
 
-    interface Reader {
+    interface Reader: AutoCloseable {
         fun next(): Map<String,*>?
-        fun close()
     }
 
-    interface Writer {
+    interface Writer: AutoCloseable {
         fun write(row: List<Any?>)
-        fun close()
     }
 }
