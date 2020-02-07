@@ -13,7 +13,7 @@ import jsonsql.functions.functionRegistry
  * There are two versions of compiled expressions, those for group bys (many rows) -> 1 or those for normal scalar
  * expressions(ie in the select, where and join-on clauses) which are 1-1.
  *
- * This gives (upstream) the operators some flexibility as to what order etc the want to order the fields in their tuples
+ * This gives the (upstream) operators some flexibility as to what order etc the want to order the fields in their tuples
  * instead of baking all that logic into the tree builder and hence spreading logic around.
  */
 

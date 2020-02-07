@@ -2,7 +2,6 @@ package jsonsql.physical
 
 import jsonsql.ast.Ast
 import jsonsql.ast.Field
-import jsonsql.filesystems.FileSystem
 import jsonsql.logical.LogicalOperator
 import jsonsql.logical.LogicalTree
 import jsonsql.physical.operators.*
@@ -52,7 +51,7 @@ private fun physicalOperator(operator: LogicalOperator) : PhysicalOperator {
         is LogicalOperator.Limit -> LimitOperator(operator.limit, physicalOperator(operator.sourceOperator))
         is LogicalOperator.Sort -> SortOperator(operator.sortExpressions, physicalOperator(operator.sourceOperator))
         is LogicalOperator.Describe -> DescribeOperator(operator.tableDefinition, operator.tableOutput)
-        is LogicalOperator.DataSource -> TableScanOperator(operator.tableDefinition, operator.fields().map { it.fieldName }, operator.alias)
+        is LogicalOperator.DataSource -> TableScanOperator(operator.tableDefinition, operator.fields.map { it.fieldName }, operator.alias)
         is LogicalOperator.Explain -> ExplainOperator(physicalOperator(operator.sourceOperator))
         is LogicalOperator.Project -> ProjectOperator(operator.expressions, physicalOperator(operator.sourceOperator), operator.alias)
         is LogicalOperator.Filter -> FilterOperator(operator.predicate, physicalOperator(operator.sourceOperator))

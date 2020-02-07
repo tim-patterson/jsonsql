@@ -11,7 +11,7 @@ private object ExpressionValidator: LogicalVisitor<Unit>() {
 
     override fun visit(expression: Ast.Expression.Identifier, operator: LogicalOperator, context: Unit): Ast.Expression {
         val field = expression.field
-        val sourceFields = operator.children.flatMap { it.fields() }
+        val sourceFields = operator.children.flatMap { it.fields }
         if (field.tableAlias != null) {
             semanticAssert(field in sourceFields, "$field not found in $sourceFields")
         } else {
