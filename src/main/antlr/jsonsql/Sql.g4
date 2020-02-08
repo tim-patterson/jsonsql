@@ -100,7 +100,8 @@ table_or_subquery
   ;
 
 function_call
-  : IDENTIFIER '(' (expr ( ',' expr )*)? ')'
+  : IDENTIFIER '(' OP_MULT ')' // Special case for count(*)
+  | IDENTIFIER '(' (expr ( ',' expr )*)? ')'
   ;
 
 // Key words
