@@ -1,18 +1,18 @@
 package jsonsql.physical.operators
 
-import jsonsql.ast.Ast
-import jsonsql.ast.Field
+import jsonsql.query.Field
 import jsonsql.physical.*
+import jsonsql.query.NamedExpr
 
 class ProjectOperator(
-        private val expressions: List<Ast.NamedExpr>,
+        private val expressions: List<NamedExpr>,
         private val source: PhysicalOperator,
         private val tableAlias: String?
 ): PhysicalOperator() {
 
     override val columnAliases = expressions.map { Field(tableAlias, it.alias!!) }
 
-    private val compiledExpressions = compileExpressions(expressions.map(Ast.NamedExpr::expression), source.columnAliases)
+    private val compiledExpressions = compileExpressions(expressions.map(NamedExpr::expression), source.columnAliases)
 
     override fun data(context: ExecutionContext): ClosableSequence<Tuple> {
         val sourceData = source.data(context)

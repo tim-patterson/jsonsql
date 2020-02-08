@@ -1,6 +1,6 @@
 package jsonsql.logical
 
-import jsonsql.ast.Ast
+import jsonsql.query.*
 
 /**
  * Class to visit all logical operators and expressions, builds up copy of tree as
@@ -79,23 +79,23 @@ abstract class LogicalVisitor<C> {
                     sourceOperator = visit(operator.sourceOperator, context)
             )
 
-    open fun visit(namedExpression: Ast.NamedExpr, index: Int, operator: LogicalOperator, context: C): Ast.NamedExpr =
+    open fun visit(namedExpression: NamedExpr, index: Int, operator: LogicalOperator, context: C): NamedExpr =
         namedExpression.copy(expression = visit(namedExpression.expression, operator, context))
 
-    open fun visit(orderExpression: Ast.OrderExpr, operator: LogicalOperator, context: C): Ast.OrderExpr =
+    open fun visit(orderExpression: OrderExpr, operator: LogicalOperator, context: C): OrderExpr =
         orderExpression.copy(expression = visit(orderExpression.expression, operator, context))
 
-    open fun visit(expression: Ast.Expression, operator: LogicalOperator, context: C): Ast.Expression =
+    open fun visit(expression: Expression, operator: LogicalOperator, context: C): Expression =
         when(expression) {
-            is Ast.Expression.Identifier -> visit(expression, operator, context)
-            is Ast.Expression.Constant -> visit(expression, operator, context)
-            is Ast.Expression.Function -> visit(expression, operator, context)
+            is Expression.Identifier -> visit(expression, operator, context)
+            is Expression.Constant -> visit(expression, operator, context)
+            is Expression.Function -> visit(expression, operator, context)
         }
 
-    open fun visit(expression: Ast.Expression.Identifier, operator: LogicalOperator, context: C): Ast.Expression = expression
-    open fun visit(expression: Ast.Expression.Constant, operator: LogicalOperator, context: C): Ast.Expression = expression
-    open fun visit(expression: Ast.Expression.Function, operator: LogicalOperator, context: C): Ast.Expression =
+    open fun visit(expression: Expression.Identifier, operator: LogicalOperator, context: C): Expression = expression
+    open fun visit(expression: Expression.Constant, operator: LogicalOperator, context: C): Expression = expression
+    open fun visit(expression: Expression.Function, operator: LogicalOperator, context: C): Expression =
         expression.copy(parameters = expression.parameters.map { visit(it, operator, context) })
 
-    open fun visit(table: Ast.Table, context: C): Ast.Table = table
+    open fun visit(table: Table, context: C): Table = table
 }

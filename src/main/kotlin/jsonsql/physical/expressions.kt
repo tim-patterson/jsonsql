@@ -1,11 +1,11 @@
 package jsonsql.physical
-import jsonsql.ast.Ast
-import jsonsql.ast.Field
+import jsonsql.query.Field
 import jsonsql.functions.Function
 import jsonsql.functions.functionRegistry
+import jsonsql.query.Expression
 
 /**
- * The idea behind these functions are to take expressions that are still represented by their ast nodes and turn them
+ * The idea behind these functions are to take expressions that are still represented by their query nodes and turn them
  * into something that can be evaluated.
  * One of the optimisations we do in this step is to perform the index lookups once at this compile step instead of for
  * ever tuple. Currently this compilation invoked by the operators.
@@ -18,21 +18,21 @@ import jsonsql.functions.functionRegistry
  */
 
 // Scalar stuff
-fun compileExpressions(expressions: List<Ast.Expression>, columnAliases: List<Field>): List<ExpressionExecutor> {
+fun compileExpressions(expressions: List<Expression>, columnAliases: List<Field>): List<ExpressionExecutor> {
     return expressions.map { expression -> compileExpression(expression, columnAliases)}
 }
 
-fun compileExpression(expression: Ast.Expression, columnAliases: List<Field>): ExpressionExecutor {
+fun compileExpression(expression: Expression, columnAliases: List<Field>): ExpressionExecutor {
     return when(expression) {
-        is Ast.Expression.Identifier -> {
+        is Expression.Identifier -> {
             var idx = columnAliases.indexOf(expression.field)
             if (idx == -1){
                 idx = columnAliases.map { it.fieldName }.indexOf(expression.field.fieldName)
             }
             IdentifierExecutor(idx)
         }
-        is Ast.Expression.Constant -> ConstantExecutor(expression.value)
-        is Ast.Expression.Function -> {
+        is Expression.Constant -> ConstantExecutor(expression.value)
+        is Expression.Function -> {
             val function = functionRegistry[expression.functionName]!!
             FunctionExecutor(function as Function.ScalarFunction, compileExpressions(expression.parameters, columnAliases))
         }
@@ -58,21 +58,21 @@ class FunctionExecutor(val function: Function.ScalarFunction, val args: List<Exp
 
 // Aggregate stuff
 
-fun compileAggregateExpressions(expressions: List<Ast.Expression>, columnAliases: List<Field>): List<AggregateExpressionExecutor> {
+fun compileAggregateExpressions(expressions: List<Expression>, columnAliases: List<Field>): List<AggregateExpressionExecutor> {
     return expressions.map { expression -> compileAggregateExpression(expression, columnAliases)}
 }
 
-fun compileAggregateExpression(expression: Ast.Expression, columnAliases: List<Field>): AggregateExpressionExecutor {
+fun compileAggregateExpression(expression: Expression, columnAliases: List<Field>): AggregateExpressionExecutor {
     return when(expression) {
-        is Ast.Expression.Identifier -> {
+        is Expression.Identifier -> {
             var idx = columnAliases.indexOf(expression.field)
             if (idx == -1){
                 idx = columnAliases.map { it.fieldName }.indexOf(expression.field.fieldName)
             }
             IdentifierAggregateExecutor(idx)
         }
-        is Ast.Expression.Constant -> ConstantAggregateExecutor(expression.value)
-        is Ast.Expression.Function -> {
+        is Expression.Constant -> ConstantAggregateExecutor(expression.value)
+        is Expression.Function -> {
             val function = functionRegistry[expression.functionName]!!
             when (function) {
                 is Function.ScalarFunction -> ScalarFunctionAggregateExecutor(function, compileAggregateExpressions(expression.parameters, columnAliases))

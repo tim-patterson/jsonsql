@@ -1,11 +1,10 @@
 package jsonsql.physical.operators
 
-import jsonsql.ast.Ast
-import jsonsql.ast.Field
 import jsonsql.physical.*
+import jsonsql.query.OrderExpr
 
 class SortOperator(
-        private val sortExpressions: List<Ast.OrderExpr>,
+        private val sortExpressions: List<OrderExpr>,
         private val source: PhysicalOperator
 ): PhysicalOperator() {
 

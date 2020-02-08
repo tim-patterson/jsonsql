@@ -1,13 +1,13 @@
 package jsonsql.physical.operators
 
-import jsonsql.ast.Ast
-import jsonsql.ast.Field
+import jsonsql.query.Field
 import jsonsql.physical.*
-import java.lang.Exception
+import jsonsql.query.Expression
+import jsonsql.query.NamedExpr
 
 class GroupByOperator(
-        private val expressions: List<Ast.NamedExpr>,
-        private val groupByKeys: List<Ast.Expression>,
+        private val expressions: List<NamedExpr>,
+        private val groupByKeys: List<Expression>,
         private val source: PhysicalOperator,
         private val tableAlias: String?
 ): PhysicalOperator() {

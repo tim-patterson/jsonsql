@@ -1,12 +1,11 @@
 package jsonsql.physical.operators
 
-import jsonsql.ast.Ast
-import jsonsql.ast.Field
 import jsonsql.functions.BooleanInspector
 import jsonsql.physical.*
+import jsonsql.query.Expression
 
 class JoinOperator(
-        private val joinCondition: Ast.Expression,
+        private val joinCondition: Expression,
         private val left: PhysicalOperator,
         private val right: PhysicalOperator
 ): PhysicalOperator() {

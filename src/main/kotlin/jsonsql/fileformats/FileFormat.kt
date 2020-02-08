@@ -1,8 +1,8 @@
 package jsonsql.fileformats
 
-import jsonsql.ast.Ast
-import jsonsql.ast.TableType
-import jsonsql.ast.TableType.*
+import jsonsql.query.Table
+import jsonsql.query.TableType
+import jsonsql.query.TableType.*
 import jsonsql.filesystems.FileSystem
 
 interface FileFormat {
@@ -12,8 +12,8 @@ interface FileFormat {
     fun split(): Boolean = true
 
     companion object {
-        fun reader(table: Ast.Table) = forType(table.type).reader(FileSystem.from(table.path), table.path)
-        fun writer(table: Ast.Table, fields: List<String>) = forType(table.type).writer(FileSystem.from(table.path), table.path, fields)
+        fun reader(table: Table) = forType(table.type).reader(FileSystem.from(table.path), table.path)
+        fun writer(table: Table, fields: List<String>) = forType(table.type).writer(FileSystem.from(table.path), table.path, fields)
 
         fun forType(tableType: TableType) =
             when (tableType) {

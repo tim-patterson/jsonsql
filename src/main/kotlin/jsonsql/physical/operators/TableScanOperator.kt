@@ -1,12 +1,12 @@
 package jsonsql.physical.operators
 
-import jsonsql.ast.Ast
-import jsonsql.ast.Field
+import jsonsql.query.Field
 import jsonsql.fileformats.FileFormat
 import jsonsql.physical.*
+import jsonsql.query.Table
 
 class TableScanOperator(
-        private val table: Ast.Table,
+        private val table: Table,
         private val fields: List<String>,
         private val tableAlias: String?
 ): PhysicalOperator() {

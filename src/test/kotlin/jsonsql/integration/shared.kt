@@ -2,8 +2,7 @@ package jsonsql.integration
 
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.type.TypeFactory
-import jsonsql.executor.operatorTreeFromSql
+import jsonsql.physical.operatorTreeFromSql
 import jsonsql.functions.StringInspector
 import org.hamcrest.MatcherAssert
 import org.hamcrest.Matchers
