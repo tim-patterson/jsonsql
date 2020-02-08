@@ -112,7 +112,6 @@ private object PopulateFieldsVisitor: LogicalVisitor<Set<Field>>() {
     }
 
     override fun visit(operator: LogicalOperator.LateralView, context: Set<Field>): LogicalOperator {
-        semanticAssert(operator.expression.alias != null, "Lateral View must have alias")
         val upstreamFieldsNeeded = neededFields(operator.expression.expression) + context
         return super.visit(operator, upstreamFieldsNeeded)
     }

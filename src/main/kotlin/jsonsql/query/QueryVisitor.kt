@@ -1,179 +1,139 @@
 package jsonsql.query
 
 /**
- * Class to visit all nodes within the query including expressions, builds up copy of tree as
- * it goes, can be used to build modified copy of tree for optimizations etc
+ * Class to visit all nodes within the query including expressions, every walk results in a new tree.
+ * Not the typical GOF visitor, none of the double dispatch stuff.
+ * Every visit/postVisit method needs to return a node, this allows us to substitute subtree's as we go.
+ * visit methods are called before walking the children, postVisits after.
+ * If substituting in the visit methods then
+ * it is the responsibility of the subclass to call walk if they wish to continue walking down their transformed node.
  */
 abstract class QueryVisitor<C> {
-    open fun visit(node: Query, context: C): Query =
-            when(node) {
-                is Query.Select -> visit(node, context)
-                is Query.Describe -> visit(node, context)
-                is Query.Explain -> visit(node, context)
-                is Query.Insert -> visit(node, context)
-            }
+    /**
+     * In order to support substituting trees before we walk the children then we actually need to walk at the level of
+     * of the return type, ie a function expression could be substituted for a constant, this means internally we need
+     * to separate the code that visits the children from that of the parents. Hence we have 3 sets of methods in this
+     * class.
+     * 1. accept - entry points for visiting a node, this calls the visit methods.
+     * 2. walk - walk the children but not the node itself, ie call accept for the child nodes.
+     * 3. visit - methods that can be overridden by subclasses
+     */
 
-    open fun visit(node: Query.Select, context: C): Query {
-        val selectScope = node.innerScope()
-        val orderScope = node.outerScope()
-        return node.copy(
-                expressions = node.expressions.map { visit(it, selectScope, context) },
-                groupBy = node.groupBy?.let { it.map { visit(it, selectScope, context) } },
-                predicate = node.predicate?.let { visit(it, selectScope, context) },
-                source = visit(node.source, context),
-                orderBy = node.orderBy?.let { it.map { visit(it, orderScope, context) } }
-        )
-    }
-
-    open fun visit(node: Query.Describe, context: C): Query =
-            node.copy(
-                    tbl = visit(node.tbl, context)
-            )
-
-    open fun visit(node: Query.Explain, context: C): Query =
-            node.copy(
-                    query = visit(node.query, context)
-            )
-
-    open fun visit(node: Query.Insert, context: C): Query =
-            node.copy(
-                    query = visit(node.query, context),
-                    tbl = visit(node.tbl, context)
-            )
-
-    open fun visit(node: Query.SelectSource, context: C): Query.SelectSource =
-            when(node) {
-                is Query.SelectSource.JustATable -> visit(node, context)
-                is Query.SelectSource.LateralView -> visit(node, context)
-                is Query.SelectSource.Join -> visit(node, context)
-                is Query.SelectSource.InlineView -> visit(node, context)
-            }
-
-    open fun visit(node: Query.SelectSource.JustATable, context: C): Query.SelectSource =
-            node.copy(
-                    table = visit(node.table, context)
-            )
-
-    open fun visit(node: Query.SelectSource.LateralView, context: C): Query.SelectSource =
-            node.copy(
-                    source = visit(node.source, context),
-                    expression = visit(node.expression, node.innerScope(), context)
-            )
-
-    open fun visit(node: Query.SelectSource.Join, context: C): Query.SelectSource =
-            node.copy(
-                    joinCondition = visit(node.joinCondition, node.outerScope(), context),
-                    source1 = visit(node.source1, context),
-                    source2 = visit(node.source2, context)
-            )
-
-    open fun visit(node: Query.SelectSource.InlineView, context: C): Query.SelectSource =
-            node.copy(
-                    inner = visit(node.inner, context)
-            )
-
-    open fun visit(node: NamedExpr, scope: Scope, context: C): NamedExpr =
-            node.copy(
-                    expression = visit(node.expression, scope, context)
-            )
-
-    open fun visit(node: OrderExpr, scope: Scope, context: C): OrderExpr =
-            node.copy(
-                    expression = visit(node.expression, scope, context)
-            )
-
-
-    open fun visit(node: Expression, scope: Scope, context: C): Expression =
-            when(node) {
-                is Expression.Constant -> visit(node, scope, context)
-                is Expression.Identifier -> visit(node, scope, context)
-                is Expression.Function -> visit(node, scope, context)
-            }
-
-    open fun visit(node: Expression.Constant, scope: Scope, context: C): Expression =
-            node
-
-    open fun visit(node: Expression.Identifier, scope: Scope, context: C): Expression =
-            node
-
-    open fun visit(node: Expression.Function, scope: Scope, context: C): Expression =
-            node.copy(parameters = node.parameters.map { visit(it, scope, context) })
-
-    open fun visit(node: Table, context: C): Table =
-            node
-}
-
-/**
- * Class that can be passed into the visit methods that allows us to see whats in scope etc.
- */
-data class Scope (
-        val tableAliases: Set<String>,
-        val fields: Set<Field>,
-        // Where our source is something like a table and we can ask for any column
-        val anyFields: Boolean = false
-) {
-    fun merge(other: Scope): Scope {
-        return Scope(
-                tableAliases + other.tableAliases,
-                fields + other.fields,
-                anyFields || other.anyFields
-        )
-    }
-}
-
-fun Query.outerScope(): Scope =
-        when(this) {
-            is Query.Select -> this.outerScope()
-            is Query.Insert -> Scope(setOf(), setOf(Field(null, "results")))
-            is Query.Explain -> Scope(setOf(), setOf(Field(null, "plan")))
-            is Query.Describe -> {
-                val fieldNames = if (tableOutput) setOf("table") else setOf("column_name", "column_type")
-                Scope(setOf(), fieldNames.map { Field(null, it) }.toSet())
-            }
+    protected fun accept(node: Query, context: C): Query {
+        return when (node) {
+            is Query.Select -> accept(node, context)
+            is Query.Describe -> accept(node, context)
+            is Query.Explain -> accept(node, context)
+            is Query.Insert -> accept(node, context)
         }
-
-
-fun Query.SelectSource.outerScope(): Scope =
-        when(this) {
-            is Query.SelectSource.JustATable -> this.outerScope()
-            is Query.SelectSource.Join -> this.outerScope()
-            is Query.SelectSource.InlineView -> this.outerScope()
-            is Query.SelectSource.LateralView -> this.outerScope()
-        }
-
-fun Query.SelectSource.JustATable.outerScope(): Scope =
-        Scope(
-                this.tableAlias?.let { setOf(it) } ?: setOf(),
-                setOf(),
-                anyFields = true
-        )
-
-fun Query.SelectSource.Join.outerScope(): Scope =
-        this.source1.outerScope().merge(this.source2.outerScope())
-
-fun Query.SelectSource.InlineView.outerScope(): Scope {
-        val subQueryScope = this.inner.outerScope()
-        return Scope(
-                this.tableAlias?.let { setOf(it) } ?: setOf(),
-                subQueryScope.fields.map { it.copy(tableAlias=this.tableAlias)}.toSet(),
-                subQueryScope.anyFields
-        )
-}
-
-fun Query.SelectSource.LateralView.outerScope(): Scope {
-    val sourceScope = this.source.outerScope()
-    return if( this.expression.alias == null ){
-        sourceScope
-    } else {
-        sourceScope.copy(fields = sourceScope.fields + setOf(Field(null, this.expression.alias)))
     }
+
+    protected fun walk(node: Query, context: C): Query {
+        return when (node) {
+            is Query.Select -> {
+                val selectScope = node.innerScope()
+                val orderScope = node.outerScope()
+                return node.copy(
+                        source = accept(node.source, context),
+                        predicate = node.predicate?.let { accept(it, selectScope.copy(location = Scope.Location.WHERE), context) },
+                        groupBy = node.groupBy?.let { it.map { accept(it, selectScope.copy(location = Scope.Location.GROUP_BY), context) } },
+                        expressions = node.expressions.map { accept(it, selectScope.copy(location = Scope.Location.PROJECT), context) },
+                        orderBy = node.orderBy?.let { it.map { accept(it, orderScope.copy(location = Scope.Location.ORDER_BY), context) } }
+                )
+            }
+            is Query.Describe -> node.copy(tbl = accept(node.tbl, context))
+            is Query.Explain -> node.copy(query = accept(node.query, context))
+            is Query.Insert -> node.copy(query = accept(node.query, context), tbl = accept(node.tbl, context))
+        }
+    }
+
+    protected fun accept(node: Query.Select, context: C): Query = visit(node, context)
+    protected open fun visit(node: Query.Select, context: C): Query = walk(node, context)
+
+    protected fun accept(node: Query.Describe, context: C): Query = visit(node, context)
+    protected open fun visit(node: Query.Describe, context: C): Query = walk(node, context)
+
+    protected fun accept(node: Query.Explain, context: C): Query = visit(node, context)
+    protected open fun visit(node: Query.Explain, context: C): Query = walk(node, context)
+
+    protected fun accept(node: Query.Insert, context: C): Query = visit(node, context)
+    protected open fun visit(node: Query.Insert, context: C): Query = walk(node, context)
+
+    protected fun accept(node: Query.SelectSource, context: C): Query.SelectSource =
+            when(node) {
+                is Query.SelectSource.JustATable -> accept(node, context)
+                is Query.SelectSource.LateralView -> accept(node, context)
+                is Query.SelectSource.Join -> accept(node, context)
+                is Query.SelectSource.InlineView -> accept(node, context)
+            }
+
+    protected fun walk(node: Query.SelectSource, context: C): Query.SelectSource =
+            when(node) {
+                is Query.SelectSource.JustATable -> node.copy(table = accept(node.table, context))
+                is Query.SelectSource.LateralView -> {
+                    node.copy(
+                            source = accept(node.source, context),
+                            expression = accept(node.expression, node.innerScope().copy(location = Scope.Location.LATERAL_VIEW), context)
+                    )
+                }
+                is Query.SelectSource.Join -> {
+                    node.copy(
+                            joinCondition = accept(node.joinCondition, node.outerScope().copy(location = Scope.Location.JOIN_CONDITION), context),
+                            source1 = accept(node.source1, context),
+                            source2 = accept(node.source2, context)
+                    )
+                }
+                is Query.SelectSource.InlineView -> node.copy(inner = accept(node.inner, context))
+            }
+
+    protected fun accept(node: Query.SelectSource.JustATable, context: C): Query.SelectSource = visit(node, context)
+    protected open fun visit(node: Query.SelectSource.JustATable, context: C): Query.SelectSource = walk(node, context)
+
+    protected fun accept(node: Query.SelectSource.LateralView, context: C): Query.SelectSource = visit(node, context)
+    protected open fun visit(node: Query.SelectSource.LateralView, context: C): Query.SelectSource = walk(node, context)
+
+    protected fun accept(node: Query.SelectSource.Join, context: C): Query.SelectSource = visit(node, context)
+    protected open fun visit(node: Query.SelectSource.Join, context: C): Query.SelectSource = walk(node, context)
+
+    protected fun accept(node: Query.SelectSource.InlineView, context: C): Query.SelectSource = visit(node, context)
+    protected open fun visit(node: Query.SelectSource.InlineView, context: C): Query.SelectSource = walk(node, context)
+
+    protected fun accept(node: NamedExpr, scope: Scope, context: C): NamedExpr =
+            node.copy(
+                    expression = accept(node.expression, scope, context)
+            )
+
+    protected fun accept(node: OrderExpr, scope: Scope, context: C): OrderExpr =
+            node.copy(
+                    expression = accept(node.expression, scope, context)
+            )
+
+    protected fun accept(node: Expression, scope: Scope, context: C): Expression {
+        return when(node) {
+            is Expression.Constant -> accept(node, scope, context)
+            is Expression.Identifier -> accept(node, scope, context)
+            is Expression.Function -> accept(node, scope, context)
+        }
+    }
+
+    // walk method for all expressions
+    protected fun walk(node: Expression, scope: Scope, context: C): Expression =
+            when(node) {
+                is Expression.Constant -> node // no children
+                is Expression.Identifier -> node // no children
+                is Expression.Function -> {
+                    node.copy(parameters = node.parameters.map { accept(it, scope, context) })
+                }
+            }
+
+    protected fun accept(node: Expression.Constant, scope: Scope, context: C): Expression = visit(node, scope, context)
+    protected open fun visit(node: Expression.Constant, scope: Scope, context: C): Expression = walk(node, scope, context)
+
+    protected fun accept(node: Expression.Identifier, scope: Scope, context: C): Expression = visit(node, scope, context)
+    protected open fun visit(node: Expression.Identifier, scope: Scope, context: C): Expression = walk(node, scope, context)
+
+    protected fun accept(node: Expression.Function, scope: Scope, context: C): Expression = visit(node, scope, context)
+    protected open fun visit(node: Expression.Function, scope: Scope, context: C): Expression = walk(node, scope, context)
+
+    protected fun accept(node: Table, context: C): Table = node
 }
-
-fun Query.Select.outerScope() = Scope(
-        setOf(),
-        this.expressions.map { it.alias }.filterNotNull().map { Field(null, it) }.toSet()
-)
-
-fun Query.Select.innerScope() = this.source.outerScope()
-
-fun Query.SelectSource.LateralView.innerScope() = this.source.outerScope()
