@@ -14,7 +14,7 @@ sealed class Query {
      */
     sealed class SelectSource {
         data class JustATable(val table: Table, val tableAlias: String?): SelectSource()
-        data class InlineView(val inlineView: Query, val tableAlias: String?): SelectSource()
+        data class InlineView(val inner: Query, val tableAlias: String?): SelectSource()
         data class LateralView(val source: SelectSource, val expression: NamedExpr): SelectSource()
         data class Join(val source1: SelectSource, val source2: SelectSource, val joinCondition: Expression): SelectSource()
     }

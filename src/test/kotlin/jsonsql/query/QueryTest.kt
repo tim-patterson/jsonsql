@@ -17,7 +17,7 @@ object QueryTest: Spek({
         it("simple select") {
             assertThat(parse("select 1 from json 'dummy';"), equalTo(
                     Select(
-                            listOf(NamedExpr(Constant(1.0), null)),
+                            listOf(NamedExpr(Constant(1.0), "_col0")),
                             SelectSource.JustATable(Table(TableType.JSON,"dummy"), null)
                     ) as Query
             ))

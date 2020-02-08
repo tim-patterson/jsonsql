@@ -1,6 +1,5 @@
 package jsonsql.logical
 
-import jsonsql.query.Query
 import jsonsql.functions.Function
 import jsonsql.functions.functionRegistry
 import jsonsql.query.Expression

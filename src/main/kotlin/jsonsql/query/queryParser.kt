@@ -2,6 +2,8 @@ package jsonsql.query
 
 import jsonsql.SqlLexer
 import jsonsql.SqlParser
+import jsonsql.query.normalize.NormalizeIdentifiersVisitor
+import jsonsql.query.normalize.PopulateColumnAliasesVistor
 import org.antlr.v4.runtime.BaseErrorListener
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
@@ -10,7 +12,7 @@ import org.antlr.v4.runtime.misc.ParseCancellationException
 import org.antlr.v4.runtime.tree.TerminalNode
 
 /**
- * All the logic that transforms the ANTLR parsetree into our Query datastructure
+ * All the logic that transforms the ANTLR parsetree into our Query datastr
  */
 
 
@@ -21,7 +23,10 @@ fun parse(statement: String): Query {
     val parser = SqlParser(tokens)
     parser.removeErrorListeners()
     parser.addErrorListener(ThrowingErrorListener)
-    return parseStmt(parser.stmt())
+    var query = parseStmt(parser.stmt())
+    query = NormalizeIdentifiersVisitor.apply(query)
+    query = PopulateColumnAliasesVistor.apply(query)
+    return query
 }
 
 private object ThrowingErrorListener : BaseErrorListener() {
