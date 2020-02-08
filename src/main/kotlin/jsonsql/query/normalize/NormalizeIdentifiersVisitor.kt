@@ -1,47 +1,23 @@
 package jsonsql.query.normalize
 
-import jsonsql.query.Expression
-import jsonsql.query.Field
-import jsonsql.query.Query
-import jsonsql.query.QueryVisitor
+import jsonsql.query.*
 
 /**
  * Tablename.identifer will be wrongly represented as idx(Tablename, identifier)
  * Tablename.identifer.subfield will be idx(idx(Tablename, identifier), subfield)
  * This visitor attempts to correct this
  */
-class NormalizeIdentifiersVisitor: QueryVisitor<List<String>>() {
+class NormalizeIdentifiersVisitor: QueryVisitor<Unit>() {
     companion object {
         fun apply(query: Query): Query =
-                NormalizeIdentifiersVisitor().visit(query, listOf())
+                NormalizeIdentifiersVisitor().visit(query, Unit)
     }
 
-
-    override fun visit(node: Query.Select, context: List<String>): Query {
-        fun tableAliases(node: Query.SelectSource): List<String?> =
-                when(node) {
-                    is Query.SelectSource.JustATable -> listOf(node.tableAlias)
-                    is Query.SelectSource.Join -> tableAliases(node.source1) + tableAliases(node.source2)
-                    is Query.SelectSource.InlineView -> listOf(node.tableAlias)
-                    is Query.SelectSource.LateralView -> tableAliases(node.source)
-                }
-        val aliases = tableAliases(node.source).filterNotNull()
-
-        // Walk everything except for order by's here as order by's can't be fully qualified
-        return node.copy(
-                expressions = node.expressions.map { visit(it, aliases) },
-                groupBy = node.groupBy?.let { it.map { visit(it, aliases) } },
-                predicate = node.predicate?.let { visit(it, aliases) },
-                // TODO here for the join conditions but should they be able to see the table aliases in joins below them?
-                source = visit(node.source, aliases)
-        )
-    }
-
-    override fun visit(node: Expression.Function, context: List<String>): Expression {
-        if (node.functionName == "idx" && node.parameters.size == 2) {
+    override fun visit(node: Expression.Function, scope: Scope, context: Unit): Expression {
+        if (scope.tableAliases.isNotEmpty() && node.functionName == "idx" && node.parameters.size == 2) {
             val (arg1, arg2) = node.parameters
 
-            if (arg1 is Expression.Identifier && arg1.field.fieldName in context) {
+            if (arg1 is Expression.Identifier && arg1.field.fieldName in scope.tableAliases) {
                 // This is one we need to fix, child element should either be a constant or
                 // another idx function but this may not be the case if someone is manually using
                 // the idx something to do something weird
@@ -62,6 +38,6 @@ class NormalizeIdentifiersVisitor: QueryVisitor<List<String>>() {
             }
         }
 
-        return super.visit(node, context)
+        return super.visit(node, scope, context)
     }
 }

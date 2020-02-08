@@ -3,11 +3,11 @@ package jsonsql.logical
 import jsonsql.functions.Function
 import jsonsql.functions.functionRegistry
 import jsonsql.query.*
+import jsonsql.query.validate.semanticAssert
 
 fun logicalOperatorTree(query: Query) : LogicalTree {
     var tree = LogicalTree(fromQuery(query))
     tree = PopulateFieldsVisitor.visit(tree, setOf())
-    tree = validate(tree)
     return parallelize(tree)
 }
 

@@ -1,5 +1,6 @@
 package jsonsql.query
 
+
 /**
  * Data structure that represents a query as we think about it from the sql point of view
  */

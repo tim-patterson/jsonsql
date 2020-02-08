@@ -4,6 +4,7 @@ import jsonsql.SqlLexer
 import jsonsql.SqlParser
 import jsonsql.query.normalize.NormalizeIdentifiersVisitor
 import jsonsql.query.normalize.PopulateColumnAliasesVistor
+import jsonsql.query.validate.ValidationVisitor
 import org.antlr.v4.runtime.BaseErrorListener
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
@@ -26,6 +27,7 @@ fun parse(statement: String): Query {
     var query = parseStmt(parser.stmt())
     query = NormalizeIdentifiersVisitor.apply(query)
     query = PopulateColumnAliasesVistor.apply(query)
+    query = ValidationVisitor.apply(query)
     return query
 }
 
