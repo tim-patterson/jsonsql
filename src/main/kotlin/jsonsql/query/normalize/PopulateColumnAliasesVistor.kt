@@ -9,23 +9,23 @@ import jsonsql.query.QueryVisitor
 class PopulateColumnAliasesVistor: QueryVisitor<Unit>() {
     companion object {
         fun apply(query: Query): Query =
-                PopulateColumnAliasesVistor().visit(query, Unit)
+                PopulateColumnAliasesVistor().accept(query, Unit)
     }
 
 
     override fun visit(node: Query.Select, context: Unit): Query {
-        val expressions = node.expressions.mapIndexed { index, namedExpr ->
+        val fixedExpressions = node.expressions.mapIndexed { index, namedExpr ->
             namedExpr.copy(alias = namedExpr.alias ?: "_col$index")
         }
 
-        return super.visit(node.copy(expressions = expressions), context)
+        return walk(node.copy(expressions = fixedExpressions), context)
     }
 
     override fun visit(node: Query.SelectSource.LateralView, context: Unit): Query.SelectSource {
         if (node.expression.alias == null) {
-            error("Lateral View alias can't for automatically inferred for expression")
+            error("Lateral View alias can't be automatically inferred for expression")
         }
-        return super.visit(node, context)
+        return walk(node, context)
     }
 
 }
