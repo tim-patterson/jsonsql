@@ -5,6 +5,7 @@ import jsonsql.SqlParser
 import jsonsql.query.normalize.NormalizeIdentifiersVisitor
 import jsonsql.query.normalize.PopulateColumnAliasesVistor
 import jsonsql.query.validate.ValidationVisitor
+import jsonsql.query.validate.semanticAssert
 import org.antlr.v4.runtime.BaseErrorListener
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
@@ -154,8 +155,12 @@ private fun parseIdentifierStr(node: TerminalNode): String {
 }
 
 private fun parseFunctionCall(node: SqlParser.Function_callContext): Expression.Function {
+    val functionName = node.IDENTIFIER().text.toLowerCase()
+    if (node.OP_MULT() != null) {
+        semanticAssert(functionName == "count", "* as function argument is only supported for count function")
+    }
     val expressions = node.expr().map(::parseExpression)
-    return Expression.Function(node.IDENTIFIER().text.toLowerCase(), expressions)
+    return Expression.Function(functionName, expressions)
 }
 
 private fun parseStringLiteral(node: TerminalNode): Expression.Constant {

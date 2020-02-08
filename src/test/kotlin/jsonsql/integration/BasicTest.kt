@@ -88,6 +88,14 @@ object BasicTest: Spek({
             """.trimIndent())
         }
 
+        it("select count(*)") {
+            testQuery("select extension, count(*) from dir 'test_data' where parent='test_data' group by extension order by extension;", """
+                csv | 1.0
+                gz | 1.0
+                json | 5.0
+            """.trimIndent())
+        }
+
         it("select __all__") {
             testQuery("select __all__ from json 'test_data/nested.json' limit 3;", """
                 {"rownum":1,"arrayval":["a1","a2","a3"],"structval":{"inner_key":"a"},"floatval":1.1}
