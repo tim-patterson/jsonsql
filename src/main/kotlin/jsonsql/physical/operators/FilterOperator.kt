@@ -1,12 +1,11 @@
 package jsonsql.physical.operators
 
-import jsonsql.ast.Ast
-import jsonsql.ast.Field
+import jsonsql.query.Expression
 import jsonsql.functions.BooleanInspector
 import jsonsql.physical.*
 
 class FilterOperator(
-        private val predicate: Ast.Expression,
+        private val predicate: Expression,
         private val source: PhysicalOperator
 ): PhysicalOperator() {
 

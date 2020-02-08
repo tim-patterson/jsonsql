@@ -1,15 +1,16 @@
 package jsonsql.logical
 
-import jsonsql.ast.Ast
+import jsonsql.query.Query
 import jsonsql.functions.Function
 import jsonsql.functions.functionRegistry
+import jsonsql.query.Expression
 
 fun validate(tree: LogicalTree) = ExpressionValidator.visit(tree, Unit)
 
 
 private object ExpressionValidator: LogicalVisitor<Unit>() {
 
-    override fun visit(expression: Ast.Expression.Identifier, operator: LogicalOperator, context: Unit): Ast.Expression {
+    override fun visit(expression: Expression.Identifier, operator: LogicalOperator, context: Unit): Expression {
         val field = expression.field
         val sourceFields = operator.children.flatMap { it.fields }
         if (field.tableAlias != null) {
@@ -24,7 +25,7 @@ private object ExpressionValidator: LogicalVisitor<Unit>() {
         return expression
     }
 
-    override fun visit(expression: Ast.Expression.Function, operator: LogicalOperator, context: Unit): Ast.Expression {
+    override fun visit(expression: Expression.Function, operator: LogicalOperator, context: Unit): Expression {
         val function = functionRegistry[expression.functionName] ?: error("function \"${expression.functionName}\" not found")
 
         if (operator !is LogicalOperator.GroupBy) {

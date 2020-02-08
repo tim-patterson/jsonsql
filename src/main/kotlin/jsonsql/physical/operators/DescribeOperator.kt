@@ -1,14 +1,14 @@
 package jsonsql.physical.operators
 
-import jsonsql.ast.Ast
-import jsonsql.ast.Field
-import jsonsql.ast.TableType
+import jsonsql.query.Table
+import jsonsql.query.Field
+import jsonsql.query.TableType
 import jsonsql.fileformats.FileFormat
 import jsonsql.physical.*
 
 
 class DescribeOperator(
-        private val table: Ast.Table,
+        private val table: Table,
         private val tableOutput: Boolean
 ): PhysicalOperator() {
 

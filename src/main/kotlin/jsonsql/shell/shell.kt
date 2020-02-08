@@ -1,9 +1,8 @@
 package jsonsql.shell
 
-import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.ObjectMapper
 import jsonsql.SqlLexer
-import jsonsql.executor.operatorTreeFromSql
+import jsonsql.physical.operatorTreeFromSql
 import jsonsql.functions.StringInspector
 import jsonsql.physical.PhysicalTree
 import org.antlr.v4.runtime.CharStreams

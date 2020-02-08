@@ -1,12 +1,12 @@
 package jsonsql.physical.operators
 
-import jsonsql.ast.Ast
-import jsonsql.ast.Field
+import jsonsql.query.Field
 import jsonsql.functions.ArrayInspector
 import jsonsql.physical.*
+import jsonsql.query.NamedExpr
 
 class LateralViewOperator(
-        private val expression: Ast.NamedExpr,
+        private val expression: NamedExpr,
         private val source: PhysicalOperator
 ): PhysicalOperator() {
 

@@ -1,26 +1,25 @@
-package jsonsql.ast
+package jsonsql.query
 
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.*
 import org.junit.platform.runner.JUnitPlatform
 import org.junit.runner.RunWith
 
-import jsonsql.ast.Ast.*
-import jsonsql.ast.Ast.Statement.*
-import jsonsql.ast.Ast.Expression.*
+import jsonsql.query.Query.*
+import jsonsql.query.Expression.*
 import org.spekframework.spek2.Spek
 import org.spekframework.spek2.style.specification.describe
 
 @RunWith(JUnitPlatform::class)
-object AstTest: Spek({
+object QueryTest: Spek({
 
     describe("astParser") {
         it("simple select") {
             assertThat(parse("select 1 from json 'dummy';"), equalTo(
                     Select(
                             listOf(NamedExpr(Constant(1.0), null)),
-                            Source.Table(Table(TableType.JSON,"dummy"), null)
-                    ) as Statement
+                            SelectSource.JustATable(Table(TableType.JSON,"dummy"), null)
+                    ) as Query
             ))
         }
 

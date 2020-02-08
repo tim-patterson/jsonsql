@@ -1,9 +1,8 @@
 package jsonsql.logical
 
-import jsonsql.ast.Ast
-import jsonsql.ast.Field
 import jsonsql.functions.Function
 import jsonsql.functions.functionRegistry
+import jsonsql.query.*
 
 sealed class LogicalOperator(
         vararg val children: LogicalOperator
@@ -11,19 +10,19 @@ sealed class LogicalOperator(
     open val alias: String? = null // The table alias of this operator ie from (...) as foo, the foo here gets assigned to the inner project or group by.
     abstract val fields: List<Field> // The fields exposed by the operator
 
-    data class Project(val expressions: List<Ast.NamedExpr>, val sourceOperator: LogicalOperator, override val alias: String?): LogicalOperator(sourceOperator) {
+    data class Project(val expressions: List<NamedExpr>, val sourceOperator: LogicalOperator, override val alias: String?): LogicalOperator(sourceOperator) {
         override val fields by lazy { expressions.map { Field(alias, it.alias!!) } }
     }
 
-    data class LateralView(val expression: Ast.NamedExpr, val sourceOperator: LogicalOperator): LogicalOperator(sourceOperator) {
+    data class LateralView(val expression: NamedExpr, val sourceOperator: LogicalOperator): LogicalOperator(sourceOperator) {
         override val fields by lazy { sourceOperator.fields.filterNot { it.fieldName == expression.alias!!} + Field(alias, expression.alias!!) }
     }
 
-    data class Filter(val predicate: Ast.Expression, val sourceOperator: LogicalOperator): LogicalOperator(sourceOperator) {
+    data class Filter(val predicate: Expression, val sourceOperator: LogicalOperator): LogicalOperator(sourceOperator) {
         override val fields by lazy { sourceOperator.fields }
     }
 
-    data class Sort(val sortExpressions: List<Ast.OrderExpr>, val sourceOperator: LogicalOperator): LogicalOperator(sourceOperator) {
+    data class Sort(val sortExpressions: List<OrderExpr>, val sourceOperator: LogicalOperator): LogicalOperator(sourceOperator) {
         override val fields by lazy { sourceOperator.fields }
     }
 
@@ -31,7 +30,7 @@ sealed class LogicalOperator(
         override val fields by lazy { sourceOperator.fields }
     }
 
-    data class Describe(val tableDefinition: Ast.Table, val tableOutput: Boolean): LogicalOperator() {
+    data class Describe(val tableDefinition: Table, val tableOutput: Boolean): LogicalOperator() {
         override val fields = if(tableOutput) {
             listOf("table")
         } else {
@@ -39,7 +38,7 @@ sealed class LogicalOperator(
         }.map { Field(alias, it) }
     }
 
-    data class DataSource(val fieldNames: List<String>, val tableDefinition: Ast.Table, override val alias: String?): LogicalOperator() {
+    data class DataSource(val fieldNames: List<String>, val tableDefinition: Table, override val alias: String?): LogicalOperator() {
         override val fields = fieldNames.map { Field(alias, it) }
     }
 
@@ -47,11 +46,11 @@ sealed class LogicalOperator(
         override val fields = listOf(Field(null, "plan"))
     }
 
-    data class GroupBy(val expressions: List<Ast.NamedExpr>, val groupByExpressions: List<Ast.Expression>, val sourceOperator: LogicalOperator, override val alias: String?): LogicalOperator(sourceOperator) {
+    data class GroupBy(val expressions: List<NamedExpr>, val groupByExpressions: List<Expression>, val sourceOperator: LogicalOperator, override val alias: String?): LogicalOperator(sourceOperator) {
         override val fields by lazy {  expressions.map { Field(alias, it.alias!!) } }
     }
 
-    data class Join(val sourceOperator1: LogicalOperator, val sourceOperator2: LogicalOperator, val onClause: Ast.Expression): LogicalOperator(sourceOperator1, sourceOperator2) {
+    data class Join(val sourceOperator1: LogicalOperator, val sourceOperator2: LogicalOperator, val onClause: Expression): LogicalOperator(sourceOperator1, sourceOperator2) {
         override val fields  by lazy { sourceOperator1.fields + sourceOperator2.fields }
     }
 
@@ -59,7 +58,7 @@ sealed class LogicalOperator(
         override val fields by lazy { sourceOperator.fields }
     }
 
-    data class Write(val tableDefinition: Ast.Table, val sourceOperator: LogicalOperator): LogicalOperator(sourceOperator) {
+    data class Write(val tableDefinition: Table, val sourceOperator: LogicalOperator): LogicalOperator(sourceOperator) {
         override val fields by lazy { listOf(Field(null, "result")) }
     }
 }
@@ -67,14 +66,8 @@ sealed class LogicalOperator(
 data class LogicalTree(val root: LogicalOperator)
 
 
-fun logicalOperatorTree(stmt: Ast.Statement) : LogicalTree {
-    var tree = when(stmt) {
-        is Ast.Statement.Describe -> LogicalTree(LogicalOperator.Describe(stmt.tbl, stmt.tableOutput))
-        is Ast.Statement.Select -> LogicalTree(fromSelect(stmt))
-        is Ast.Statement.Explain -> LogicalTree(LogicalOperator.Explain(fromSelect(stmt.select)))
-        is Ast.Statement.Insert -> LogicalTree(LogicalOperator.Write(stmt.tbl, fromSelect(stmt.select)))
-    }
-
+fun logicalOperatorTree(query: Query) : LogicalTree {
+    var tree = LogicalTree(fromQuery(query))
     tree = NormalizeIdentifiersVisitor.visit(tree, Unit)
     tree = PopulateFieldsVisitor.visit(tree, setOf())
     tree = validate(tree)
@@ -82,21 +75,32 @@ fun logicalOperatorTree(stmt: Ast.Statement) : LogicalTree {
     return parallelize(tree)
 }
 
-private fun fromSource(node: Ast.Source): LogicalOperator {
+
+private fun fromQuery(node: Query): LogicalOperator {
     return when(node) {
-        is Ast.Source.Table -> fromTable(node)
-        is Ast.Source.InlineView -> fromSelect(node.inlineView, node.tableAlias)
-        is Ast.Source.LateralView -> {
+        is Query.Describe -> LogicalOperator.Describe(node.tbl, node.tableOutput)
+        is Query.Select -> fromSelect(node)
+        is Query.Explain -> LogicalOperator.Explain(fromQuery(node.query))
+        is Query.Insert -> LogicalOperator.Write(node.tbl, fromQuery(node.query))
+    }
+}
+
+private fun fromSource(node: Query.SelectSource): LogicalOperator {
+    return when(node) {
+        is Query.SelectSource.JustATable -> fromTable(node)
+        // TODO point this at fromQuery instead once the alias stuff is sorted properly
+        is Query.SelectSource.InlineView -> fromSelect(node.inlineView as Query.Select, node.tableAlias)
+        is Query.SelectSource.LateralView -> {
             val source = fromSource(node.source)
             val expr = (node.expression.copy(expression = node.expression.expression))
             LogicalOperator.LateralView(expr, source)
         }
-        is Ast.Source.Join -> fromJoin(node)
+        is Query.SelectSource.Join -> fromJoin(node)
     }
 }
 
 
-private fun fromJoin(node: Ast.Source.Join): LogicalOperator.Join {
+private fun fromJoin(node: Query.SelectSource.Join): LogicalOperator.Join {
     val sourceOperator1 = fromSource(node.source1)
     val sourceOperator2 = fromSource(node.source2)
     val expr = node.joinCondition
@@ -104,7 +108,7 @@ private fun fromJoin(node: Ast.Source.Join): LogicalOperator.Join {
 }
 
 
-private fun fromSelect(node: Ast.Statement.Select, tableAlias: String? = null ): LogicalOperator {
+private fun fromSelect(node: Query.Select, tableAlias: String? = null ): LogicalOperator {
     var operator = fromSource(node.source)
 
     if (node.predicate != null) {
@@ -131,13 +135,13 @@ private fun fromSelect(node: Ast.Statement.Select, tableAlias: String? = null ):
 }
 
 
-private fun fromTable(node: Ast.Source.Table): LogicalOperator.DataSource {
+private fun fromTable(node: Query.SelectSource.JustATable): LogicalOperator.DataSource {
     return LogicalOperator.DataSource(listOf(), node.table, node.tableAlias)
 }
 
 
-private fun checkForAggregate(expr: Ast.Expression) : Boolean {
-    return if(expr is Ast.Expression.Function) {
+private fun checkForAggregate(expr: Expression) : Boolean {
+    return if(expr is Expression.Function) {
         semanticAssert(expr.functionName in functionRegistry, "function \"${expr.functionName}\" not found")
         if (functionRegistry[expr.functionName]!! is Function.AggregateFunction) {
             true
@@ -153,7 +157,7 @@ private fun checkForAggregate(expr: Ast.Expression) : Boolean {
  * Ensures all named expressions have aliases, and pushes the list of required fields down to the table sources.
  */
 private object PopulateFieldsVisitor: LogicalVisitor<Set<Field>>() {
-    override fun visit(namedExpression: Ast.NamedExpr, index: Int, operator: LogicalOperator, context: Set<Field>): Ast.NamedExpr {
+    override fun visit(namedExpression: NamedExpr, index: Int, operator: LogicalOperator, context: Set<Field>): NamedExpr {
         return namedExpression.copy(alias = namedExpression.alias ?: "_col$index")
     }
 
@@ -191,11 +195,11 @@ private object PopulateFieldsVisitor: LogicalVisitor<Set<Field>>() {
         return operator.copy(fieldNames = fields)
     }
 
-    private fun neededFields(expression: Ast.Expression): Set<Field> {
+    private fun neededFields(expression: Expression): Set<Field> {
         return when (expression) {
-            is Ast.Expression.Identifier -> setOf(expression.field)
-            is Ast.Expression.Constant -> setOf()
-            is Ast.Expression.Function -> expression.parameters.flatMap(::neededFields).toSet()
+            is Expression.Identifier -> setOf(expression.field)
+            is Expression.Constant -> setOf()
+            is Expression.Function -> expression.parameters.flatMap(::neededFields).toSet()
         }
     }
 }
@@ -206,27 +210,27 @@ private object PopulateFieldsVisitor: LogicalVisitor<Set<Field>>() {
 // This visitor is here to correct these.
 private object NormalizeIdentifiersVisitor: LogicalVisitor<Unit>() {
 
-    override fun visit(expression: Ast.Expression.Function, operator: LogicalOperator, context: Unit): Ast.Expression {
+    override fun visit(expression: Expression.Function, operator: LogicalOperator, context: Unit): Expression {
         if (expression.functionName == "idx" && expression.parameters.size == 2) {
             val (arg1, arg2) = expression.parameters
 
             fun LogicalOperator.aliasesInScope(): List<String> = alias?.let { listOf(it) } ?: children.flatMap { it.aliasesInScope() }
 
-            if (arg1 is Ast.Expression.Identifier && arg1.field.fieldName in operator.children.flatMap { it.aliasesInScope() }) {
+            if (arg1 is Expression.Identifier && arg1.field.fieldName in operator.children.flatMap { it.aliasesInScope() }) {
                 // This is one we need to fix, child element should either be a constant or
                 // another idx function but this may not be the case if someone is manually using
                 // the idx something to do something weird
                 val tableAlias = arg1.field.fieldName
                 when(arg2) {
-                    is Ast.Expression.Constant -> {
-                        if (arg2.value is String) return Ast.Expression.Identifier(Field(tableAlias, arg2.value))
+                    is Expression.Constant -> {
+                        if (arg2.value is String) return Expression.Identifier(Field(tableAlias, arg2.value))
                     }
-                    is Ast.Expression.Function -> {
-                        if(arg2.functionName == "idx" && (arg2.parameters.first() is Ast.Expression.Constant)) {
-                            val identifierConst = arg2.parameters.first() as Ast.Expression.Constant
-                            val identifier = Ast.Expression.Identifier(Field(tableAlias, identifierConst.value as String))
+                    is Expression.Function -> {
+                        if(arg2.functionName == "idx" && (arg2.parameters.first() is Expression.Constant)) {
+                            val identifierConst = arg2.parameters.first() as Expression.Constant
+                            val identifier = Expression.Identifier(Field(tableAlias, identifierConst.value as String))
                             val params = listOf(identifier) + arg2.parameters.drop(1)
-                            return Ast.Expression.Function("idx", params)
+                            return Expression.Function("idx", params)
                         }
                     }
                 }

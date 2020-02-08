@@ -1,6 +1,6 @@
 package jsonsql.physical.operators
 
-import jsonsql.ast.Field
+import jsonsql.query.Field
 import jsonsql.physical.*
 
 class ExplainOperator(

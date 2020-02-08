@@ -1,10 +1,11 @@
 package jsonsql.physical
 
-import jsonsql.ast.Ast
-import jsonsql.ast.Field
+import jsonsql.query.Query
+import jsonsql.query.Field
 import jsonsql.logical.LogicalOperator
 import jsonsql.logical.LogicalTree
 import jsonsql.physical.operators.*
+import jsonsql.query.Table
 
 
 // Represents a row of data flowing through.
@@ -72,7 +73,7 @@ data class PhysicalTree(private val root: PhysicalOperator) {
     val columnAliases by lazy { root.columnAliases }
 }
 
-private fun getTableSource(operator: LogicalOperator): Ast.Table {
+private fun getTableSource(operator: LogicalOperator): Table {
     return when (operator) {
         is LogicalOperator.Describe -> operator.tableDefinition
         is LogicalOperator.DataSource -> operator.tableDefinition
