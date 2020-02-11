@@ -2,6 +2,6 @@
   "resources": [
     {"pattern": "org/jline/utils/.*caps$"},
     {"pattern": "org/jline/utils/capabilities\\.txt$"},
-    {"pattern": "com/amazonaws/partitions/.*json$"}
+    {"pattern": "com/amazonaws/.*json$"}
   ]
 }

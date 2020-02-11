@@ -1,13 +1,16 @@
 package jsonsql;
 
+import com.amazonaws.internal.config.*;
 import com.amazonaws.partitions.model.*;
 import com.amazonaws.services.s3.internal.AWSS3V4Signer;
+import com.amazonaws.services.securitytoken.internal.STSProfileCredentialsService;
 import com.fasterxml.jackson.databind.ext.Java7HandlersImpl;
 import com.oracle.svm.core.annotate.AutomaticFeature;
 import com.oracle.svm.core.jdk.proxy.DynamicProxyRegistry;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.LogFactoryImpl;
 import org.apache.commons.logging.impl.NoOpLog;
+import org.apache.http.conn.ConnectionRequest;
 import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.pool.ConnPoolControl;
 import org.apache.kafka.clients.consumer.RangeAssignor;
@@ -62,6 +65,12 @@ public class GraalFeature implements Feature {
 
             // This seems to be only loaded sometimes to deal with errors or something?
             RuntimeReflection.register(Class.forName("com.sun.xml.internal.stream.XMLInputFactoryImpl"));
+            RuntimeReflection.register(Class.forName("com.sun.xml.internal.stream.XMLInputFactoryImpl").getConstructors());
+
+            // STS support
+            RuntimeReflection.register(STSProfileCredentialsService.class);
+            RuntimeReflection.register(STSProfileCredentialsService.class.getConstructors());
+            RuntimeReflection.register(STSProfileCredentialsService.class.getMethods());
 
             // These are pojo's instantiated by jackson from json data
             runtimeReflectionRegisterAll(Partitions.class);
@@ -70,18 +79,28 @@ public class GraalFeature implements Feature {
             runtimeReflectionRegisterAll(Service.class);
             runtimeReflectionRegisterAll(Endpoint.class);
             runtimeReflectionRegisterAll(CredentialScope.class);
+            runtimeReflectionRegisterAll(InternalConfigJsonHelper.class);
+            runtimeReflectionRegisterAll(SignerConfigJsonHelper.class);
+            runtimeReflectionRegisterAll(HttpClientConfigJsonHelper.class);
+            runtimeReflectionRegisterAll(JsonIndex.class);
+            runtimeReflectionRegisterAll(HostRegexToRegionMappingJsonHelper.class);
             RuntimeReflection.register(HashSet.class.getConstructors());
             RuntimeReflection.register(Java7HandlersImpl.class.getConstructor());
 
             // Attempt to init all the aws classes at build time that do all the local json loading stuff
-            RuntimeClassInitialization.initializeAtBuildTime("com.amazonaws");
+            // RuntimeClassInitialization.initializeAtBuildTime("com.amazonaws");
             RuntimeClassInitialization.initializeAtBuildTime("com.fasterxml.jackson");
             RuntimeClassInitialization.initializeAtBuildTime("org.joda.time");
             RuntimeClassInitialization.initializeAtBuildTime("org.apache.http");
             RuntimeClassInitialization.initializeAtBuildTime("org.apache.commons.codec");
+
+
             DynamicProxyRegistry dynamicProxySupport = ImageSingletons.lookup(DynamicProxyRegistry.class);
             Class<?> wrapped = Class.forName("com.amazonaws.http.conn.Wrapped");
+            RuntimeClassInitialization.initializeAtBuildTime(wrapped);
+
             dynamicProxySupport.addProxyClass(HttpClientConnectionManager.class, ConnPoolControl.class, wrapped);
+            dynamicProxySupport.addProxyClass(ConnectionRequest.class, wrapped);
 
             RuntimeReflection.register(AWSS3V4Signer.class.getConstructors());
 
