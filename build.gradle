@@ -6,7 +6,7 @@ buildscript {
     ext.aws_sdk_version = '1.11.718'
     ext.jackson_version = '2.10.2'
     ext.kafka_version = '2.4.0' // Remember to bump slf4j version
-    ext.graalvm_version = '19.2.1'
+    ext.graalvm_version = '19.3.1'
     ext.slf4j_version = '1.7.28' // Should be kept in sync with the version pulled in by kafka
 
     // Test Deps
@@ -63,7 +63,7 @@ dependencies {
     implementation "com.amazonaws:aws-java-sdk-sts:$aws_sdk_version"
     implementation "org.apache.kafka:kafka-clients:$kafka_version"
     implementation "org.slf4j:slf4j-nop:$slf4j_version"
-    compileOnly "com.oracle.substratevm:svm:$graalvm_version"
+    compileOnly "org.graalvm.nativeimage:svm:$graalvm_version"
 
     testImplementation "org.junit.platform:junit-platform-runner:$junit_platform_runner_version"
     testImplementation "org.spekframework.spek2:spek-dsl-jvm:$spek_version"
