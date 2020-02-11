@@ -60,6 +60,9 @@ public class GraalFeature implements Feature {
             // Graal should have figured this out but maybe due to it being captured in an array or something it didn't
             RuntimeReflection.register(String.class);
 
+            // This seems to be only loaded sometimes to deal with errors or something?
+            RuntimeReflection.register(Class.forName("com.sun.xml.internal.stream.XMLInputFactoryImpl"));
+
             // These are pojo's instantiated by jackson from json data
             runtimeReflectionRegisterAll(Partitions.class);
             runtimeReflectionRegisterAll(Partition.class);
