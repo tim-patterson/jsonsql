@@ -5,6 +5,7 @@ import com.amazonaws.regions.DefaultAwsRegionProviderChain
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.S3ObjectSummary
+import com.amazonaws.services.securitytoken.internal.STSProfileCredentialsService
 import jsonsql.functions.StringInspector
 import java.io.*
 import java.net.URI

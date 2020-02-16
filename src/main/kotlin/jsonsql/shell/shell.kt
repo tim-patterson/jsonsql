@@ -1,5 +1,8 @@
 package jsonsql.shell
 
+import com.amazonaws.services.securitytoken.AWSSecurityTokenService
+import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder
+import com.amazonaws.services.securitytoken.model.AssumeRoleRequest
 import com.fasterxml.jackson.databind.ObjectMapper
 import jsonsql.SqlLexer
 import jsonsql.physical.operatorTreeFromSql
@@ -44,7 +47,6 @@ fun main(args: Array<String>) {
         println()
         exitProcess(0)
     }
-
 
     val historyFile = try {
         val homedir = File(System.getProperty("user.home"))
