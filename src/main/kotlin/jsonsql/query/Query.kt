@@ -38,7 +38,8 @@ data class NamedExpr(val expression: Expression, val alias: String?)
 data class OrderExpr(val expression: Expression, val asc: Boolean)
 
 // Table may not be the right word here...
-data class Table(val type: TableType, val path: String)
+// Fields will initially be empty but will be populated in our semantic planning phase(normalize)
+data class Table(val type: TableType, val path: String, val fields: List<String>)
 
 data class Field(val tableAlias: String?, val fieldName: String) {
     override fun toString() = tableAlias?.let { "$it.$fieldName" } ?: fieldName

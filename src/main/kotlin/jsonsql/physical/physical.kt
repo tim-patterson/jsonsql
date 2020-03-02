@@ -2,8 +2,6 @@ package jsonsql.physical
 
 import jsonsql.query.Query
 import jsonsql.query.Field
-import jsonsql.logical.LogicalOperator
-import jsonsql.logical.LogicalTree
 import jsonsql.physical.operators.*
 import jsonsql.query.Table
 
@@ -42,41 +40,68 @@ abstract class PhysicalOperator {
     abstract fun data(context: ExecutionContext): ClosableSequence<Tuple>
 }
 
-fun physicalOperatorTree(operatorTree: LogicalTree): PhysicalTree {
-    val root = physicalOperator(operatorTree.root)
+fun physicalOperatorTree(query: Query): PhysicalTree {
+    val root = physicalOperator(query)
     return PhysicalTree(root)
 }
 
-private fun physicalOperator(operator: LogicalOperator) : PhysicalOperator {
-    return when(operator) {
-        is LogicalOperator.Limit -> LimitOperator(operator.limit, physicalOperator(operator.sourceOperator))
-        is LogicalOperator.Sort -> SortOperator(operator.sortExpressions, physicalOperator(operator.sourceOperator))
-        is LogicalOperator.Describe -> DescribeOperator(operator.tableDefinition, operator.tableOutput)
-        is LogicalOperator.DataSource -> TableScanOperator(operator.tableDefinition, operator.fields.map { it.fieldName }, operator.alias)
-        is LogicalOperator.Explain -> ExplainOperator(physicalOperator(operator.sourceOperator))
-        is LogicalOperator.Project -> ProjectOperator(operator.expressions, physicalOperator(operator.sourceOperator), operator.alias)
-        is LogicalOperator.Filter -> FilterOperator(operator.predicate, physicalOperator(operator.sourceOperator))
-        is LogicalOperator.LateralView -> LateralViewOperator(operator.expression, physicalOperator(operator.sourceOperator))
-        is LogicalOperator.Join -> JoinOperator(operator.onClause, physicalOperator(operator.sourceOperator1), physicalOperator(operator.sourceOperator2))
-        is LogicalOperator.GroupBy -> GroupByOperator(operator.expressions, operator.groupByExpressions, physicalOperator(operator.sourceOperator), operator.alias)
-
-        is LogicalOperator.Gather -> {
-            val tableSource = getTableSource(operator.sourceOperator)
-            GatherOperator(physicalOperator(operator.sourceOperator), tableSource.path)
-        }
-        is LogicalOperator.Write -> WriteOperator(operator.tableDefinition, physicalOperator(operator.sourceOperator))
+private fun physicalOperator(query: Query) : PhysicalOperator {
+    return when(query) {
+        is Query.Describe -> DescribeOperator(query.tbl, query.tableOutput)
+        is Query.Select -> fromSelect(query)
+        is Query.Explain -> ExplainOperator(physicalOperator(query.query))
+        is Query.Insert -> WriteOperator(query.tbl, physicalOperator(query.query))
     }
+}
+
+private fun fromSource(source: Query.SelectSource): PhysicalOperator {
+    return when(source) {
+        is Query.SelectSource.JustATable -> fromTable(source)
+        // TODO point this at fromQuery instead once the alias stuff is sorted properly
+        is Query.SelectSource.InlineView -> fromSelect(source.inner as Query.Select, source.tableAlias)
+        is Query.SelectSource.LateralView -> {
+            LateralViewOperator(source.expression, fromSource(source.source))
+        }
+        is Query.SelectSource.Join -> fromJoin(source)
+    }
+}
+
+private fun fromTable(source: Query.SelectSource.JustATable): PhysicalOperator {
+    return TableScanOperator(source.table, source.table.fields, source.tableAlias)
+}
+
+private fun fromSelect(node: Query.Select, tableAlias: String? = null): PhysicalOperator {
+    var operator = fromSource(node.source)
+
+    if (node.predicate != null) {
+        operator = FilterOperator(node.predicate, operator)
+    }
+
+    operator = if (node.groupBy != null ) {
+        val groupByKeys = node.groupBy
+         GroupByOperator(node.expressions, groupByKeys, operator, tableAlias)
+    } else {
+        ProjectOperator(node.expressions, operator, tableAlias)
+    }
+
+    if (node.orderBy != null) {
+        operator = SortOperator(node.orderBy, operator)
+    }
+
+    if (node.limit != null) {
+        operator = LimitOperator(node.limit, operator)
+    }
+    return operator
+}
+
+private fun fromJoin(node: Query.SelectSource.Join): JoinOperator {
+    val sourceOperator1 = fromSource(node.source1)
+    val sourceOperator2 = fromSource(node.source2)
+    val expr = node.joinCondition
+    return JoinOperator(expr, sourceOperator1, sourceOperator2)
 }
 
 data class PhysicalTree(private val root: PhysicalOperator) {
     fun execute() = root.data(ExecutionContext())
     val columnAliases by lazy { root.columnAliases }
-}
-
-private fun getTableSource(operator: LogicalOperator): Table {
-    return when (operator) {
-        is LogicalOperator.Describe -> operator.tableDefinition
-        is LogicalOperator.DataSource -> operator.tableDefinition
-        else -> operator.children.map { getTableSource(it) }.first()
-    }
 }
