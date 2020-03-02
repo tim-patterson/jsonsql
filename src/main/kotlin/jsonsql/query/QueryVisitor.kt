@@ -31,15 +31,17 @@ abstract class QueryVisitor<C> {
     protected open fun walk(node: Query, context: C): Query {
         return when (node) {
             is Query.Select -> {
-                val selectScope = node.innerScope()
-                val orderScope = node.outerScope()
-                return node.copy(
-                        source = accept(node.source, context),
+                // We need to keep these scopes valid as we go, this means recalculating the inner scope after walking the source
+                // And the outer after walking the expressions.
+                var n = node.copy(source = accept(node.source, context))
+                val selectScope = n.innerScope()
+                n = n.copy(
                         predicate = node.predicate?.let { accept(it, selectScope.copy(location = Scope.Location.WHERE), context) },
                         groupBy = node.groupBy?.let { it.map { accept(it, selectScope.copy(location = Scope.Location.GROUP_BY), context) } },
-                        expressions = node.expressions.map { accept(it, selectScope.copy(location = Scope.Location.PROJECT), context) },
-                        orderBy = node.orderBy?.let { it.map { accept(it, orderScope.copy(location = Scope.Location.ORDER_BY), context) } }
+                        expressions = node.expressions.map { accept(it, selectScope.copy(location = Scope.Location.PROJECT), context) }
                 )
+                val orderScope = n.outerScope()
+                return n.copy(orderBy = node.orderBy?.let { it.map { accept(it, orderScope.copy(location = Scope.Location.ORDER_BY), context) } })
             }
             is Query.Describe -> node.copy(tbl = accept(node.tbl, context))
             is Query.Explain -> node.copy(query = accept(node.query, context))
@@ -71,16 +73,18 @@ abstract class QueryVisitor<C> {
             when(node) {
                 is Query.SelectSource.JustATable -> node.copy(table = accept(node.table, context))
                 is Query.SelectSource.LateralView -> {
+                    val source = accept(node.source, context)
                     node.copy(
-                            source = accept(node.source, context),
-                            expression = accept(node.expression, node.innerScope().copy(location = Scope.Location.LATERAL_VIEW), context)
+                            source = source,
+                            expression = accept(node.expression, source.outerScope().copy(location = Scope.Location.LATERAL_VIEW), context)
                     )
                 }
                 is Query.SelectSource.Join -> {
-                    node.copy(
-                            joinCondition = accept(node.joinCondition, node.outerScope().copy(location = Scope.Location.JOIN_CONDITION), context),
-                            source1 = accept(node.source1, context),
-                            source2 = accept(node.source2, context)
+                    val source1 = accept(node.source1, context)
+                    val source2 = accept(node.source2, context)
+                    val n = node.copy(source1 = source1, source2 = source2)
+                    n.copy(
+                            joinCondition = accept(node.joinCondition, n.outerScope().copy(location = Scope.Location.JOIN_CONDITION), context)
                     )
                 }
                 is Query.SelectSource.InlineView -> node.copy(inner = accept(node.inner, context))

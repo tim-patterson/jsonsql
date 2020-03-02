@@ -26,9 +26,6 @@ fun compileExpression(expression: Expression, columnAliases: List<Field>): Expre
     return when(expression) {
         is Expression.Identifier -> {
             var idx = columnAliases.indexOf(expression.field)
-            if (idx == -1){
-                idx = columnAliases.map { it.fieldName }.indexOf(expression.field.fieldName)
-            }
             assert(idx != -1) { "Identifier ${expression.field} not found in $columnAliases" }
             IdentifierExecutor(idx)
         }
@@ -67,9 +64,6 @@ fun compileAggregateExpression(expression: Expression, columnAliases: List<Field
     return when(expression) {
         is Expression.Identifier -> {
             var idx = columnAliases.indexOf(expression.field)
-            if (idx == -1){
-                idx = columnAliases.map { it.fieldName }.indexOf(expression.field.fieldName)
-            }
             IdentifierAggregateExecutor(idx)
         }
         is Expression.Constant -> ConstantAggregateExecutor(expression.value)

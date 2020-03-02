@@ -18,7 +18,7 @@ object QueryTest: Spek({
             assertThat(parse("select 1 from json 'dummy';"), equalTo(
                     Select(
                             listOf(NamedExpr(Constant(1.0), "_col0")),
-                            SelectSource.JustATable(Table(TableType.JSON,"dummy", listOf()), null)
+                            SelectSource.JustATable(Table(TableType.JSON,"dummy", listOf()), "\$_table_1")
                     ) as Query
             ))
         }
@@ -42,7 +42,7 @@ object QueryTest: Spek({
         }
 
         it("lower cases identifiers") {
-            testExpression("ABC", Identifier(Field(null, "abc")))
+            testExpression("ABC", Identifier(Field("\$_table_1", "abc")))
         }
     }
 

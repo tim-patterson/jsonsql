@@ -32,15 +32,11 @@ class TableFieldPushdownVisitor: QueryVisitor<MutableSet<Field>>() {
     }
 
     override fun visit(node: Query.SelectSource.LateralView, context: MutableSet<Field>): Query.SelectSource {
-        // TODO we should the lateral view alias from scope here
         return super.visit(node, context)
     }
 
     override fun visit(node: Query.SelectSource.JustATable, context: MutableSet<Field>): Query.SelectSource {
-        // Return a new sub-tree with table fields populated.
-        // TODO fix!
-        // val fields = context.filter { it.tableAlias ==  node.tableAlias}.map { it.fieldName }
-        val fields = context.map { it.fieldName }.toSet().toList()
+        val fields = context.filter { it.tableAlias ==  node.tableAlias}.map { it.fieldName }
         return node.copy(table= node.table.copy(fields = fields))
     }
 
