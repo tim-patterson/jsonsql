@@ -2,8 +2,10 @@ package jsonsql.query
 
 import jsonsql.SqlLexer
 import jsonsql.SqlParser
+import jsonsql.query.normalize.AggregateVisitor
 import jsonsql.query.normalize.NormalizeIdentifiersVisitor
 import jsonsql.query.normalize.PopulateColumnAliasesVistor
+import jsonsql.query.normalize.TableFieldPushdownVisitor
 import jsonsql.query.validate.ValidationVisitor
 import jsonsql.query.validate.semanticAssert
 import org.antlr.v4.runtime.BaseErrorListener
@@ -14,7 +16,7 @@ import org.antlr.v4.runtime.misc.ParseCancellationException
 import org.antlr.v4.runtime.tree.TerminalNode
 
 /**
- * All the logic that transforms the ANTLR parsetree into our Query datastr
+ * All the logic that transforms the ANTLR parsetree into our Query data structure
  */
 
 
@@ -29,6 +31,8 @@ fun parse(statement: String): Query {
     query = NormalizeIdentifiersVisitor.apply(query)
     query = PopulateColumnAliasesVistor.apply(query)
     query = ValidationVisitor.apply(query)
+    query = TableFieldPushdownVisitor.apply(query)
+    query = AggregateVisitor.apply(query)
     return query
 }
 
@@ -177,7 +181,7 @@ private fun parseTable(table: SqlParser.TableContext): Table {
         table.table_type().DIR() != null -> TableType.DIR
         else -> TableType.JSON
     }
-    return Table(tableType, parseString(table.STRING_LITERAL()))
+    return Table(tableType, parseString(table.STRING_LITERAL()), listOf())
 }
 
 private fun parseString(node: TerminalNode): String {

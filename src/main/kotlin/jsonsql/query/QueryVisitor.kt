@@ -28,7 +28,7 @@ abstract class QueryVisitor<C> {
         }
     }
 
-    protected fun walk(node: Query, context: C): Query {
+    protected open fun walk(node: Query, context: C): Query {
         return when (node) {
             is Query.Select -> {
                 val selectScope = node.innerScope()

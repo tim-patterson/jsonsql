@@ -29,6 +29,7 @@ fun compileExpression(expression: Expression, columnAliases: List<Field>): Expre
             if (idx == -1){
                 idx = columnAliases.map { it.fieldName }.indexOf(expression.field.fieldName)
             }
+            assert(idx != -1) { "Identifier ${expression.field} not found in $columnAliases" }
             IdentifierExecutor(idx)
         }
         is Expression.Constant -> ConstantExecutor(expression.value)
